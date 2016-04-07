@@ -37,9 +37,12 @@ ggsea <- function(x, y, gene.sets, ranking=ggsea_lm, es=ggsea_maxmean,
 }
 
 ggsea_lm <- function (x, y, abs=F) {
+    if (!is.matrix(y)) {
+        y = matrix(y, dimnames=list(names(y), 'Response'))
+    }
     n.response <- ncol(y)
     n.genes <- ncol(x)
-    coef <- t(lm(x ~ y)$coefficients[-1, ])
+    coef <- t(lm(x ~ y)$coefficients[-1, , drop=F])
     colnames(coef) <- colnames(y)
     rownames(coef) <- colnames(x)
     coef <- apply(coef, 2, '/', apply(x, 2, sd))
