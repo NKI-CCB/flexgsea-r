@@ -55,5 +55,28 @@ ggsea_lm <- function (x, y, abs=F) {
 ggsea_maxmean <- function(gene.order, gene.sets) {
     n.genesets <- length(gene.sets)
     n.response <- ncol(gene.order)
-    matrix(0.0, n.genesets, n.response)
+    res <- matrix(0.0, n.genesets, n.response)
+    for (gs.i in seq_along(gene.sets)) {
+        gs.o <- gene.order[gene.sets[[gs.i]], ]
+        abs.gs.o <- abs(gs.o)
+        pos <- colMeans((gs.o + abs.gs.o) / 2)
+        neg <- colMeans((-gs.o + abs.gs.o) / 2)
+        res[gs.i, ] <- pmax(pos, neg)
+        res[gs.i, neg > pos] = -1 * res[gs.i, neg > pos]
+    }
+    colnames(res) <- colnames(gene.order)
+    rownames(res) <- names(gene.sets)
+    res
+}
+
+ggsea_mean <- function(gene.order, gene.sets) {
+    n.genesets <- length(gene.sets)
+    n.response <- ncol(gene.order)
+    res <- matrix(0.0, n.genesets, n.response)
+    for (gs.i in seq_along(gene.sets)) {
+        res[gs.i, ] <- colMeans(gene.order[gene.sets[[gs.i]], ])
+    }
+    colnames(res) <- colnames(gene.order)
+    rownames(res) <- names(gene.sets)
+    res
 }
