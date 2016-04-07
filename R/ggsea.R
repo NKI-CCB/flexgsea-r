@@ -36,10 +36,17 @@ ggsea <- function(x, y, gene.sets, ranking=ggsea_lm, es=ggsea_maxmean,
     res
 }
 
-ggsea_lm <- function (x, y) {
+ggsea_lm <- function (x, y, abs=F) {
     n.response <- ncol(y)
     n.genes <- ncol(x)
-    matrix(rep(seq(n.genes), n.response), n.genes, n.response)
+    coef <- t(lm(x ~ y)$coefficients[-1, ])
+    colnames(coef) <- colnames(y)
+    rownames(coef) <- colnames(x)
+    coef <- apply(coef, 2, '/', apply(x, 2, sd))
+    if (abs) {
+        coef <- abs(coef)
+    }
+    coef
 }
 
 ggsea_maxmean <- function(gene.order, gene.sets) {

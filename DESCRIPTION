@@ -6,3 +6,4 @@ Description: Get set enrichment analysis, with different measures, also linear m
 Depends: R (>= 3.2.2)
 License: LGPL
 LazyData: true
+Suggests: testthat
