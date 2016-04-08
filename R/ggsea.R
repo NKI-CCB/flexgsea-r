@@ -88,13 +88,12 @@ ggsea_maxmean <- function(gene.score, gene.set) {
 }
 
 ggsea_mean <- function(gene.score, gene.set) {
-    n.genesets <- length(gene.sets)
-    n.response <- ncol(gene.score)
-    res <- matrix(0.0, n.genesets, n.response)
-    for (gs.i in seq_along(gene.sets)) {
-        res[gs.i, ] <- colMeans(gene.score[gene.sets[[gs.i]], ])
-    }
-    colnames(res) <- colnames(gene.score)
-    rownames(res) <- names(gene.sets)
+    total.n.genes <- dim(gene.score)[1]
+    n.response <- dim(gene.score)[2]
+    n.perm <- dim(gene.score)[3]
+
+    gs.o <- gene.score[gene.set, , ,drop=F]
+    res <- apply(gs.o, 3, colMeans)
+    rownames(res) <- colnames(gene.score)
     res
 }
