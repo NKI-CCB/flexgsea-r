@@ -33,11 +33,12 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         y.perm <- y[sample.int(nrow(y)),]
         gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
     }
-    p <- double(n.gene.sets)
+    prep <- es.fn$prep(gene.scores)
+    prep.null <- es.fn$prep(gene.scores.null)
     for (gs.i in seq(n.gene.sets)) {
         gs.index <- match(gene.sets[[gs.i]], colnames(x))
-        s <- es.fn(gene.scores, gs.index)
-        s.null <- es.fn(gene.scores.null, gs.index)
+        s <- es.fn$run(gene.scores, gs.index, prep)
+        s.null <- es.fn$run(gene.scores.null, gs.index, prep.null)
         es[gs.i, ] <- s[,1]
         p.low[gs.i, ] = rowMeans(s[, 1] < s.null)
         p.high[gs.i, ] = rowMeans(s[, 1] > s.null)
@@ -49,6 +50,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
             es=es[, n],
             p.low=p.low[, n],
             p.high=p.high[, n],
+            p=pmin(p.low, p.high),
             fdr=NA_real_,
             max.es.et=n.genes)
         })
@@ -67,33 +69,39 @@ ggsea_lm <- function (x, y, abs=F) {
     rownames(coef) <- colnames(x)
     coef <- apply(coef, 2, '/', apply(x, 2, sd))
     if (abs) {
-        coef <- abs(coef)
+        coef <- base::abs(coef)
     }
     coef
 }
 
-ggsea_maxmean <- function(gene.score, gene.set) {
-    total.n.genes <- dim(gene.score)[1]
-    n.response <- dim(gene.score)[2]
-    n.perm <- dim(gene.score)[3]
+ggsea_maxmean <- list(
+    run = function(gene.score, gene.set, prep) {
+        total.n.genes <- dim(gene.score)[1]
+        n.response <- dim(gene.score)[2]
+        n.perm <- dim(gene.score)[3]
 
-    gs.o <- gene.score[gene.set, , ,drop=F]
-    abs.gs.o <- abs(gs.o)
-    pos <- apply((gs.o + abs.gs.o) / 2, 3, colMeans)
-    neg <- apply((-gs.o + abs.gs.o) / 2, 3, colMeans)
-    res <- pmax(pos, neg)
-    res[neg > pos] = -1 * res[neg > pos]
-    rownames(res) <- colnames(gene.score)
-    res
-}
+        gs.o <- gene.score[gene.set, , ,drop=F]
+        abs.gs.o <- abs(gs.o)
+        pos <- apply((gs.o + abs.gs.o) / 2, 3, colMeans)
+        neg <- apply((-gs.o + abs.gs.o) / 2, 3, colMeans)
+        res <- pmax(pos, neg)
+        res[neg > pos] = -1 * res[neg > pos]
+        rownames(res) <- colnames(gene.score)
+        res
+    },
+    prepare = function(gene.score) { list() }
+)
 
-ggsea_mean <- function(gene.score, gene.set) {
-    total.n.genes <- dim(gene.score)[1]
-    n.response <- dim(gene.score)[2]
-    n.perm <- dim(gene.score)[3]
+ggsea_mean <- list(
+    run = function(gene.score, gene.set, prep) {
+        total.n.genes <- dim(gene.score)[1]
+        n.response <- dim(gene.score)[2]
+        n.perm <- dim(gene.score)[3]
 
-    gs.o <- gene.score[gene.set, , ,drop=F]
-    res <- apply(gs.o, 3, colMeans)
-    rownames(res) <- colnames(gene.score)
-    res
-}
+        gs.o <- gene.score[gene.set, , ,drop=F]
+        res <- apply(gs.o, 3, colMeans)
+        rownames(res) <- colnames(gene.score)
+        res
+    },
+    prepare = function(gene.score) { list() }
+)
