@@ -1,4 +1,4 @@
-ggsea <- function(x, y, gene.sets, ranking.fn=ggsea_lm, es.fn=ggsea_maxmean,
+ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
                   gene.names=NULL, nperm=1000) {
     n.gene.sets <- length(gene.sets)
     n.response <- ncol(y)
@@ -24,19 +24,20 @@ ggsea <- function(x, y, gene.sets, ranking.fn=ggsea_lm, es.fn=ggsea_maxmean,
     p.high <- matrix(1.0, n.gene.sets, n.response)
     colnames(p.high) <- colnames(y)
 
-    ranking <- ranking.fn(x, y)
-    ranking <- array(ranking, c(dim(ranking), 1),
-                     dimnames=c(dimnames(ranking), list(NULL)))
+    gene.scores <- gene.score.fn(x, y)
+    gene.scores <- array(gene.scores, c(dim(gene.scores), 1),
+                     dimnames=c(dimnames(gene.scores), list(NULL)))
     # Note: could do the order + stat blocked over permutations
-    ranking.null <- array(0, c(n.genes, n.response, nperm))
+    gene.scores.null <- array(0, c(n.genes, n.response, nperm))
     for (perm.i in seq(nperm)) {
-        ranking.null[, , perm.i] <- ranking.fn(x, y[sample.int(nrow(y)),])
+        y.perm <- y[sample.int(nrow(y)),]
+        gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
     }
     p <- double(n.gene.sets)
     for (gs.i in seq(n.gene.sets)) {
         gs.index <- match(gene.sets[[gs.i]], colnames(x))
-        s <- es.fn(ranking, gs.index)
-        s.null <- es.fn(ranking.null, gs.index)
+        s <- es.fn(gene.scores, gs.index)
+        s.null <- es.fn(gene.scores.null, gs.index)
         es[gs.i, ] <- s[,1]
         p.low[gs.i, ] = rowMeans(s[, 1] < s.null)
         p.high[gs.i, ] = rowMeans(s[, 1] > s.null)
@@ -71,29 +72,29 @@ ggsea_lm <- function (x, y, abs=F) {
     coef
 }
 
-ggsea_maxmean <- function(gene.order, gene.set) {
-    total.n.genes <- dim(gene.order)[1]
-    n.response <- dim(gene.order)[2]
-    n.perm <- dim(gene.order)[3]
+ggsea_maxmean <- function(gene.score, gene.set) {
+    total.n.genes <- dim(gene.score)[1]
+    n.response <- dim(gene.score)[2]
+    n.perm <- dim(gene.score)[3]
 
-    gs.o <- gene.order[gene.set, , ,drop=F]
+    gs.o <- gene.score[gene.set, , ,drop=F]
     abs.gs.o <- abs(gs.o)
     pos <- apply((gs.o + abs.gs.o) / 2, 3, colMeans)
     neg <- apply((-gs.o + abs.gs.o) / 2, 3, colMeans)
     res <- pmax(pos, neg)
     res[neg > pos] = -1 * res[neg > pos]
-    rownames(res) <- colnames(gene.order)
+    rownames(res) <- colnames(gene.score)
     res
 }
 
-ggsea_mean <- function(gene.order, gene.set) {
+ggsea_mean <- function(gene.score, gene.set) {
     n.genesets <- length(gene.sets)
-    n.response <- ncol(gene.order)
+    n.response <- ncol(gene.score)
     res <- matrix(0.0, n.genesets, n.response)
     for (gs.i in seq_along(gene.sets)) {
-        res[gs.i, ] <- colMeans(gene.order[gene.sets[[gs.i]], ])
+        res[gs.i, ] <- colMeans(gene.score[gene.sets[[gs.i]], ])
     }
-    colnames(res) <- colnames(gene.order)
+    colnames(res) <- colnames(gene.score)
     rownames(res) <- names(gene.sets)
     res
 }
