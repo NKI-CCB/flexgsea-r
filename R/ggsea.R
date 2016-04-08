@@ -33,8 +33,8 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         y.perm <- y[sample.int(nrow(y)),]
         gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
     }
-    prep <- es.fn$prep(gene.scores)
-    prep.null <- es.fn$prep(gene.scores.null)
+    prep <- es.fn$prepare(gene.scores)
+    prep.null <- es.fn$prepare(gene.scores.null)
     for (gs.i in seq(n.gene.sets)) {
         gs.index <- match(gene.sets[[gs.i]], colnames(x))
         s <- es.fn$run(gene.scores, gs.index, prep)
@@ -51,8 +51,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
             p.low=p.low[, n],
             p.high=p.high[, n],
             p=pmin(p.low, p.high),
-            fdr=NA_real_,
-            max.es.et=n.genes)
+            fdr=NA_real_)
         })
     names(res) <- colnames(y)
     res
@@ -104,4 +103,41 @@ ggsea_mean <- list(
         res
     },
     prepare = function(gene.score) { list() }
+)
+
+ggsea_weighted_ks <- list(
+    run = function(gene.score, gene.set, prep, p=1.0) {
+        total.n.genes <- dim(gene.score)[1]
+        n.response <- dim(gene.score)[2]
+        n.perm <- dim(gene.score)[3]
+
+
+        es <- matrix(0.0, n.response, n.perm)
+        for (i in seq(n.response)) {
+            for (j in seq(n.perm)) {
+                gs.o <- prep$gene.order[gene.set, i, j]
+                s <- gene.score[gs.o, i, j]
+                s <- abs(s)**p
+
+                p.hit <- cumsum(s) / sum(s)
+                r <- prep$gene.rank[gs.o, i, j]
+                f <- (total.n.genes - length(s))
+                p.miss = (r - seq_along(r)) / f
+
+                p.max = max(p.hit - p.miss)
+                p.min = min(c(0, p.hit) - c(p.miss, 1))
+                if (p.max > abs(p.min)) {
+                    es[i, j] = p.max
+                } else {
+                    es[i, j] = p.min
+                }
+            }
+        }
+        es
+    },
+    prepare = function(gene.score) {
+        gene.order <- apply(gene.score, c(2, 3), order)
+        gene.rank <- apply(gene.score, c(2, 3), rank, ties.method='first')
+        list(gene.order = gene.order, gene.rank = gene.rank)
+    }
 )

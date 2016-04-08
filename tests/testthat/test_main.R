@@ -14,22 +14,24 @@ y = data.matrix(select(d, starts_with('y')))
 
 gs = list(pw1=c('x1', 'x2', 'x3'), pw2=c('x2', 'x2.big'))
 
-res <- ggsea(x, y, gs, nperm=10)
+for (esf in list(ggsea_maxmean, ggsea_weighted_ks)) {
+    res <- ggsea(x, y, gs, es.fn=esf, nperm=10)
 
-test_that("ggsea result is a list", {
-    expect_true(is.list(res))
-})
-test_that("ggsea gives results for all predictors in order", {
-    expect_equal(names(res), colnames(y))
-})
-test_that("ggsea gives results for all pathways, in order", {
-    for (r in res) {
-        expect_equal(r$GeneSet, names(gs))
-    }
-})
-test_that("ggsea gives p values between 0 and 1", {
-    for (i in seq_along(res)) {
-        expect_true(all(res[[i]]$p >= 0.0), info=names(res)[i])
-        expect_true(all(res[[i]]$p <= 1.0), info=names(res)[i])
-    }
-})
+    test_that("ggsea result is a list", {
+        expect_true(is.list(res))
+    })
+    test_that("ggsea gives results for all predictors in order", {
+        expect_equal(names(res), colnames(y))
+    })
+    test_that("ggsea gives results for all pathways, in order", {
+        for (r in res) {
+            expect_equal(r$GeneSet, names(gs))
+        }
+    })
+    test_that("ggsea gives p values between 0 and 1", {
+        for (i in seq_along(res)) {
+            expect_true(all(res[[i]]$p >= 0.0))
+            expect_true(all(res[[i]]$p <= 1.0))
+        }
+    })
+}
