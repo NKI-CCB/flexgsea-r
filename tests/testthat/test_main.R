@@ -14,7 +14,7 @@ y = data.matrix(select(d, starts_with('y')))
 
 gs = list(pw1=c('x1', 'x2', 'x3'), pw2=c('x2', 'x2.big'))
 
-res <- ggsea(x, y, gs)
+res <- ggsea(x, y, gs, nperm=10)
 
 test_that("ggsea result is a list", {
     expect_true(is.list(res))
