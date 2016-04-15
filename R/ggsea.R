@@ -1,5 +1,6 @@
 ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
-                  sig.fun=ggsea_calc_sig_simple, gene.names=NULL, nperm=1000) {
+                  sig.fun=ggsea_calc_sig_simple, gene.names=NULL, nperm=1000,
+                  verbose=TRUE) {
     stopifnot(is.matrix(y))
     n.response <- ncol(y)
     stopifnot(is.matrix(x))
@@ -24,22 +25,38 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         colnames(y) <- paste0('Response ', seq(ncol(y)))
     }
 
+    if (verbose) {
+        message("Scoring Genes (Observed)")
+    }
     gene.scores <- gene.score.fn(x, y)
     gene.scores <- array(gene.scores, c(dim(gene.scores), 1),
                      dimnames=c(dimnames(gene.scores), list(NULL)))
     # Note: could do the order + stat blocked over permutations
     gene.scores.null <- array(0, c(n.genes, n.response, nperm))
+    if (verbose) {
+        message("Scoring Genes (Null)")
+    }
     for (perm.i in seq(nperm)) {
+        if (verbose) {
+            cat('.')
+        }
         y.perm <- y[sample.int(nrow(y)),]
         gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
     }
+    cat('\n')
     prep <- es.fn$prepare(gene.scores)
     prep.null <- es.fn$prepare(gene.scores.null)
     sig <- rep(list(vector('list', n.gene.sets)), n.response)
     for (gs.i in seq(n.gene.sets)) {
+        if (verbose) {
+            message(paste0("Calculating ES (Gene Set ", gs.i, ")"))
+        }
         gs.index <- match(gene.sets[[gs.i]], colnames(x))
         s <- es.fn$run(gene.scores, gs.index, prep)
         s.null <- es.fn$run(gene.scores.null, gs.index, prep.null)
+        if (verbose) {
+            message(paste0("Calculating Significance (Gene Set ", gs.i, ")"))
+        }
         for (response.i in seq(n.response)) {
             sig[[response.i]][[gs.i]] <- sig.fun(s[response.i, 1],
                                                  s.null[response.i, ])
