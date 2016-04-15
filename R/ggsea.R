@@ -1,10 +1,17 @@
 ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
-                  gene.names=NULL, nperm=1000) {
-    n.gene.sets <- length(gene.sets)
+                  sig.fun=ggsea_calc_sig_simple, gene.names=NULL, nperm=1000) {
+    stopifnot(is.matrix(y))
     n.response <- ncol(y)
+    stopifnot(is.matrix(x))
     n.genes <- ncol(x)
     n.samples <- nrow(x)
     stopifnot(n.samples == nrow(y))
+
+    stopifnot(is.list(gene.sets))
+    n.gene.sets <- length(gene.sets)
+    for (i in 1:n.gene.sets) {
+        stopifnot(is.character(gene.sets[[i]]))
+    }
 
     if (is.null(colnames(x))) {
         if(is.null(gene.names) | ncol(x) != length(gene.names)) {
@@ -17,13 +24,6 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         colnames(y) <- paste0('Response ', seq(ncol(y)))
     }
 
-    es <- matrix(0.0, n.gene.sets, n.response)
-    colnames(es) <- colnames(y)
-    p.low <- matrix(1.0, n.gene.sets, n.response)
-    colnames(p.low) <- colnames(y)
-    p.high <- matrix(1.0, n.gene.sets, n.response)
-    colnames(p.high) <- colnames(y)
-
     gene.scores <- gene.score.fn(x, y)
     gene.scores <- array(gene.scores, c(dim(gene.scores), 1),
                      dimnames=c(dimnames(gene.scores), list(NULL)))
@@ -35,26 +35,37 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     }
     prep <- es.fn$prepare(gene.scores)
     prep.null <- es.fn$prepare(gene.scores.null)
+    sig <- rep(list(vector('list', n.gene.sets)), n.response)
     for (gs.i in seq(n.gene.sets)) {
         gs.index <- match(gene.sets[[gs.i]], colnames(x))
         s <- es.fn$run(gene.scores, gs.index, prep)
         s.null <- es.fn$run(gene.scores.null, gs.index, prep.null)
-        es[gs.i, ] <- s[,1]
-        p.low[gs.i, ] = rowMeans(s[, 1] < s.null)
-        p.high[gs.i, ] = rowMeans(s[, 1] > s.null)
+        for (response.i in seq(n.response)) {
+            sig[[response.i]][[gs.i]] <- sig.fun(s[response.i, 1],
+                                                 s.null[response.i, ])
+        }
     }
+    res <- lapply(sig, . %>%
+        bind_rows %>%
+        mutate_(GeneSet=~names(gene.sets)))
     
-    res <- lapply(colnames(y), function(n) {
-        data_frame(
-            GeneSet=names(gene.sets),
-            es=es[, n],
-            p.low=p.low[, n],
-            p.high=p.high[, n],
-            p=pmin(p.low, p.high),
-            fdr=NA_real_)
-        })
     names(res) <- colnames(y)
     res
+}
+
+ggsea_calc_sig_simple <- function (es, es.null) {
+    stopifnot(is.numeric(es))
+    stopifnot(length(es) == 1)
+    stopifnot(is.numeric(es.null))
+    stopifnot(length(es.null) > 1)
+    data_frame_(list(
+        es = ~es,
+        p.low = ~1-(sum(es > es.null) / length(es.null)),
+        p.high = ~1-(sum(es < es.null) / length(es.null)),
+        p=~min(p.low, p.high),
+        fdr=~p.adjust(p, 'BH'),
+        fwer=~p.adjust(p, 'bonferroni')
+    ))
 }
 
 ggsea_lm <- function (x, y, abs=F) {
