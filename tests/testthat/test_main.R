@@ -17,7 +17,7 @@ gs = list(pw1=c('x1', 'x2', 'x3'), pw2=c('x2', 'x2.big'),
           pw3=c('x3', 'x5'))
 
 for (esf in list(ggsea_maxmean, ggsea_weighted_ks)) {
-    res <- ggsea(x, y, gs, es.fn=esf, nperm=10)
+    res <- ggsea(x, y, gs, es.fn=esf, nperm=10, verbose=F)
 
     test_that("ggsea result is a list", {
         expect_true(is.list(res))

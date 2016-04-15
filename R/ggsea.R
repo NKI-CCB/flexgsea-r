@@ -8,6 +8,12 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     n.samples <- nrow(x)
     stopifnot(n.samples == nrow(y))
 
+    if (is.character(gene.sets)) {
+        if (verbose) {
+            message("Reading gene sets from file")
+        }
+        gene.sets <- read_gmt(gene.sets)
+    }
     stopifnot(is.list(gene.sets))
     n.gene.sets <- length(gene.sets)
     for (i in 1:n.gene.sets) {
@@ -43,7 +49,9 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         y.perm <- y[sample.int(nrow(y)),]
         gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
     }
-    cat('\n')
+    if (verbose) {
+        cat('\n')
+    }
     prep <- es.fn$prepare(gene.scores)
     prep.null <- es.fn$prepare(gene.scores.null)
     sig <- rep(list(vector('list', n.gene.sets)), n.response)
@@ -169,3 +177,11 @@ ggsea_weighted_ks <- list(
         list(gene.order = gene.order, gene.rank = gene.rank)
     }
 )
+
+read_gmt <- function(file, progress=interactive()) {
+    lines <- stringr::str_split(readr::read_lines(fn), '\t', 3)
+    pw_names <- sapply(lines, `[[`, 1)
+    pw_genes <- stringr::str_split(sapply(lines, `[[`, 3), '\t')
+    names(pw_genes) <- pw_names
+    pw_genes
+}
