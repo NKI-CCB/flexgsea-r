@@ -1,6 +1,7 @@
 R=R --vanilla
 
 all : test
+.PHONY: all
 
 test : test-r check-r
 .PHONY: test
