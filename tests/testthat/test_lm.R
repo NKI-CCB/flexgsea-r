@@ -1,3 +1,5 @@
+library(dplyr)
+
 context("lm")
 
 d = data_frame(
