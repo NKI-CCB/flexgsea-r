@@ -1,9 +1,19 @@
 Package: ggsea
 Title: Gene Set Enrichment Analysis
 Version: 0.0.1
-Authors@R: person("Tycho", "Bismeijer", email = "t.bismeijer@nki.nl", role = c("aut", "cre"))
-Description: Get set enrichment analysis, with different measures, also linear models.
-Depends: R (>= 3.2.2)
-License: LGPL
+Authors@R: c(
+	person("Tycho", "Bismeijer", email = "t.bismeijer@nki.nl", role = c("aut", "cre")),
+	person(family="Netherlands Cancer Institute", role = c("cph")))
+Description: Get set enrichment analysis, with different measures, also linear
+    models.
+Depends:
+    R (>= 3.2.2),
+Imports:
+    dplyr,
+    readr,
+    stringr
+License: MIT + file LICENSE
 LazyData: true
-Suggests: testthat
+Suggests:
+    testthat
+RoxygenNote: 5.0.1

@@ -1,3 +1,6 @@
+#' @importFrom stats lm sd
+
+#' @export
 ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
                   sig.fun=ggsea_calc_sig_simple, gene.names=NULL,
                   nperm=1000, gs.size.min=10, gs.size.max=300,
@@ -80,13 +83,14 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         }
     }
     bind_and_set_names <- function (s) {
-        mutate_(bind_rows(s), GeneSet=~names(gene.sets.f))
+        dplyr::mutate_(dplyr::bind_rows(s), GeneSet=~names(gene.sets.f))
     }
     res <- lapply(sig, bind_and_set_names) 
     names(res) <- colnames(y)
     res
 }
 
+#' @export
 ggsea_calc_sig_simple <- function (es, es.null) {
     stopifnot(is.numeric(es))
     stopifnot(length(es) == 1)
@@ -102,6 +106,7 @@ ggsea_calc_sig_simple <- function (es, es.null) {
     ))
 }
 
+#' @export
 ggsea_lm <- function (x, y, abs=F) {
     if (!is.matrix(y)) {
         y = matrix(y, dimnames=list(names(y), 'Response'))
@@ -133,11 +138,13 @@ ggsea_maxmean_ <- function(gene.score, gene.set, prep) {
     res
 }
 
+#' @export
 ggsea_maxmean <- list(
     run = ggsea_maxmean_,
     prepare = function(gene.score) { list() }
 )
 
+#' @export
 ggsea_mean_ <- function(gene.score, gene.set, prep) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
@@ -149,6 +156,7 @@ ggsea_mean_ <- function(gene.score, gene.set, prep) {
     res
 }
 
+#' @export
 ggsea_mean <- list(
     run = ggsea_mean_,
     prepare = function(gene.score) { list() }
@@ -183,6 +191,7 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0) {
     }
     es
 }
+#' @export
 ggsea_weighted_ks <- list(
     run = ggsea_weighted_ks_,
     prepare = function(gene.score) {
