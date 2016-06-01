@@ -5,6 +5,9 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
                   sig.fun=ggsea_calc_sig_simple, gene.names=NULL,
                   nperm=1000, gs.size.min=10, gs.size.max=300,
                   verbose=TRUE) {
+    if (is.vector(y)) {
+        y <- matrix(y, ncol=1)
+    }
     stopifnot(is.matrix(y))
     n.response <- ncol(y)
     stopifnot(is.matrix(x))
@@ -49,12 +52,13 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     gene.scores <- gene.score.fn(x, y)
     gene.scores <- array(gene.scores, c(dim(gene.scores), 1),
                      dimnames=c(dimnames(gene.scores), list(NULL)))
+
     # Note: could do the order + stat blocked over permutations
     gene.scores.null <- array(0, c(n.genes, n.response, nperm))
     if (verbose) {
         message("Scoring Genes (Null)")
     }
-    for (perm.i in seq(nperm)) {
+    for (perm.i in seq_len(nperm)) {
         if (verbose) {
             cat('.')
         }
@@ -95,15 +99,18 @@ ggsea_calc_sig_simple <- function (es, es.null) {
     stopifnot(is.numeric(es))
     stopifnot(length(es) == 1)
     stopifnot(is.numeric(es.null))
-    stopifnot(length(es.null) > 1)
-    dplyr::data_frame_(list(
-        es = ~es,
-        p.low = ~1-(sum(es > es.null) / length(es.null)),
-        p.high = ~1-(sum(es < es.null) / length(es.null)),
-        p=~min(p.low, p.high),
-        fdr=~p.adjust(p, 'BH'),
-        fwer=~p.adjust(p, 'bonferroni')
-    ))
+    if (length(es.null) == 0) {
+        dplyr::data_frame_(list(es = ~es))
+    } else {
+        dplyr::data_frame_(list(
+            es = ~es,
+            p.low = ~1-(sum(es > es.null) / length(es.null)),
+            p.high = ~1-(sum(es < es.null) / length(es.null)),
+            p=~min(p.low, p.high),
+            fdr=~p.adjust(p, 'BH'),
+            fwer=~p.adjust(p, 'bonferroni')
+        ))
+    }
 }
 
 #' @export
@@ -119,6 +126,31 @@ ggsea_lm <- function (x, y, abs=F) {
     coef <- apply(coef, 2, '/', apply(x, 2, sd))
     if (abs) {
         coef <- base::abs(coef)
+    }
+    coef
+}
+
+#' @export
+ggsea_s2n <- function (x, y, abs=F) {
+    if (!is.matrix(y)) {
+        y = matrix(y, dimnames=list(names(y), 'Response'))
+    }
+    n.response <- ncol(y)
+    n.genes <- ncol(x)
+    coef <- apply(y, 2, function (phenotype) {
+        classes <- unique(phenotype)
+        stopifnot(length(classes) == 2)
+        x1 <- x[phenotype==classes[1], , drop=F]
+        x2 <- x[phenotype==classes[2], , drop=F]
+        m1 <- apply(x1, 2, mean)
+        m2 <- apply(x2, 2, mean)
+        sd1 <- apply(x1, 2, sd)
+        sd2 <- apply(x2, 2, sd)
+        (m1 - m2) / (sd1 + sd2)
+    })
+
+    if (abs) {
+        coef <- abs(coef)
     }
     coef
 }
@@ -170,23 +202,22 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0) {
 
     es <- matrix(0.0, n.response, n.perm)
     for (i in seq(n.response)) {
-        for (j in seq(n.perm)) {
-            gs.o <- prep$gene.order[gene.set, i, j]
-            s <- gene.score[gs.o, i, j]
-            s <- abs(s)**p
-
-            p.hit <- cumsum(s) / sum(s)
-            r <- prep$gene.rank[gs.o, i, j]
-            f <- (total.n.genes - length(s))
-            p.miss = (r - seq_along(r)) / f
-
-            p.max = max(p.hit - p.miss)
-            p.min = min(c(0, p.hit) - c(p.miss, 1))
+        for (j in seq_len(n.perm)) {
+            g.o <- prep$gene.order[, i, j]
+            gs.i <- rep(0, total.n.genes)
+            gs.i[gene.set] <- 1
+            gs <- abs(gene.score[, i, j])**p
+            p.hit <- (gs.i * gs) / sum(gs[gene.set])
+            p.miss <- (1-gs.i) / (total.n.genes - length(gene.set))
+            p.r <- cumsum((p.hit - p.miss)[g.o])
+            p.min <- min(p.r)
+            p.max <- max(p.r)
             if (p.max > abs(p.min)) {
                 es[i, j] = p.max
             } else {
                 es[i, j] = p.min
             }
+
         }
     }
     es
@@ -195,9 +226,8 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0) {
 ggsea_weighted_ks <- list(
     run = ggsea_weighted_ks_,
     prepare = function(gene.score) {
-        gene.order <- apply(gene.score, c(2, 3), order)
-        gene.rank <- apply(gene.score, c(2, 3), rank, ties.method='first')
-        list(gene.order = gene.order, gene.rank = gene.rank)
+        gene.order <- apply(gene.score, c(2, 3), order, decreasing=T)
+        list(gene.order = gene.order)
     }
 )
 
