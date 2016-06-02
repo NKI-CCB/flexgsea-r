@@ -4,7 +4,7 @@
 ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
                   sig.fun=ggsea_calc_sig_simple, gene.names=NULL,
                   nperm=1000, gs.size.min=10, gs.size.max=300,
-                  verbose=TRUE) {
+                  verbose=TRUE, block.size=1000) {
     if (is.vector(y)) {
         y <- matrix(y, ncol=1)
     }
@@ -107,6 +107,31 @@ ggsea_calc_sig_simple <- function (es, es.null) {
             p.low = ~1-(sum(es > es.null) / length(es.null)),
             p.high = ~1-(sum(es < es.null) / length(es.null)),
             p=~min(p.low, p.high),
+            fdr=~p.adjust(p, 'BH'),
+            fwer=~p.adjust(p, 'bonferroni')
+        ))
+    }
+}
+
+#' @export
+ggsea_calc_sig_split <- function (es, es.null) {
+    stopifnot(is.numeric(es))
+    stopifnot(length(es) == 1)
+    stopifnot(is.numeric(es.null))
+
+    if (length(es.null) == 0) {
+        dplyr::data_frame_(list(es = ~es))
+    } else {
+        if (es >= 0.0) {
+            es.null <- es.null[es.null >= 0.0]
+            p.perm <- sum(es <= es.null) / length(es.null)
+        } else {
+            es.null <- es.null[es.null <= 0.0]
+            p.perm <- sum(es >= es.null) / length(es.null)
+        }
+        dplyr::data_frame_(list(
+            es = ~es,
+            p = ~p.perm,
             fdr=~p.adjust(p, 'BH'),
             fwer=~p.adjust(p, 'bonferroni')
         ))

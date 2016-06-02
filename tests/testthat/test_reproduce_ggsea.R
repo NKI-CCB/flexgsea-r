@@ -87,14 +87,20 @@ d = dplyr::data_frame(
 gs = list(pw1=c('x1', 'x2', 'x3'), pw2=c('x2', 'x2.big'),
           pw3=c('x3', 'x5'))
 
-test_that("Same ES", {
+test_that("Same results", {
+    nperm = 1000
     x <- dplyr::select(d, starts_with('x'))
     y <- d$phenotype
     res_gsea <- run_gsea(x, y, gs,
-        gs.size.threshold.min=1, topgs=min(length(gs), 10), nperm=5)
+        gs.size.threshold.min=1, topgs=min(length(gs), 10), nperm=nperm)
     res <- ggsea(data.matrix(x), y, gs,
-        gene.score.fn=ggsea_s2n, es.fn=ggsea_weighted_ks, nperm=5, verbose=T,
+        gene.score.fn=ggsea_s2n, es.fn=ggsea_weighted_ks,
+        sig.fun=ggsea_calc_sig_split, nperm=nperm, verbose=F,
         gs.size.min=1)[[1]]
     expect_equal(res_gsea[order(res_gsea$GS), 'ES'][[1]],
                  res[order(res$GeneSet), 'es'][[1]])
+    expect_equal(res_gsea[order(res_gsea$GS), 'NOM p-val'][[1]],
+                 res[order(res$GeneSet), 'p'][[1]], tolerance=(1/nperm)*100)
+    expect_equal(res_gsea[order(res_gsea$GS), 'FDR q-val'][[1]],
+                 res[order(res$GeneSet), 'fdr'][[1]])
 })
