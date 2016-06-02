@@ -5,6 +5,9 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
                   sig.fun=ggsea_calc_sig_simple, gene.names=NULL,
                   nperm=1000, gs.size.min=10, gs.size.max=300,
                   verbose=TRUE, block.size=1000) {
+
+    #########################
+    # Prepare and check input
     if (is.vector(y)) {
         y <- matrix(y, ncol=1)
     }
@@ -15,8 +18,9 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     n.samples <- nrow(x)
     stopifnot(n.samples == nrow(y))
 
-    es.fn.prepare = es.fn$prepare
-    es.fn.run = es.fn$run
+    stopifnot(is.vector(block.size))
+    stopifnot(length(block.size) == 1)
+    stopifnot(block.size > 0)
 
     if (is.character(gene.sets)) {
         if (verbose) {
@@ -46,50 +50,81 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         warning("No valid gene sets after filtering for size.")
     }
 
+    #########################
+    # Calculating observed ES
     if (verbose) {
         message("Scoring Genes (Observed)")
     }
     gene.scores <- gene.score.fn(x, y)
     gene.scores <- array(gene.scores, c(dim(gene.scores), 1),
                      dimnames=c(dimnames(gene.scores), list(NULL)))
+    if (verbose) {
+        message("Calculating ES (Observed)")
+    }
+    prep <- es.fn$prepare(gene.scores)
+    es <- array(NA_real_, c(n.gene.sets, n.response))
+    for (gs.i in seq_along(gene.sets.f)) {
+        gs.index <- match(gene.sets.f[[gs.i]], colnames(x))
+        s <- es.fn$run(gene.scores, gs.index, prep)
+        stopifnot(dim(s)[2] == 1)
+        es[gs.i, ] <- s[, 1]
+    }
+    rm(prep, gene.scores)
 
-    # Note: could do the order + stat blocked over permutations
-    gene.scores.null <- array(0, c(n.genes, n.response, nperm))
-    if (verbose) {
-        message("Scoring Genes (Null)")
-    }
-    for (perm.i in seq_len(nperm)) {
-        if (verbose) {
-            cat('.')
+    ##################
+    # Permutation test
+
+    es.null <- array(NA_real_, c(n.gene.sets, n.response, nperm))
+    block.start <- 1
+    while (block.start <= nperm) {
+        block.end <- block.start + block.size - 1
+        if (block.end > nperm) {
+            block.end = nperm
         }
-        y.perm <- y[sample.int(nrow(y)),]
-        gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
+        nperm.block  <- block.end - block.start + 1
+
+        gene.scores.null <- array(0, c(n.genes, n.response, nperm.block))
+        if (verbose) {
+            message(paste0("Scoring Genes (Null) ", block.start, '--',
+                           block.end))
+        }
+        for (perm.i in seq_len(nperm.block)) {
+            y.perm <- y[sample.int(nrow(y)),]
+            gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
+        }
+        if (verbose) {
+            message(paste0("Calculating ES (Null) ", block.start, '--',
+                           block.end))
+        }
+        prep <- es.fn$prepare(gene.scores.null)
+        for (gs.i in seq_along(gene.sets.f)) {
+            gs.index <- match(gene.sets.f[[gs.i]], colnames(x))
+            es.null[gs.i, , seq(block.start, block.end)] <-
+                es.fn$run(gene.scores.null, gs.index, prep)
+        }
+
+        rm(gene.scores.null)
+        rm(prep)
+        block.start <- block.end + 1
     }
+
     if (verbose) {
-        cat('\n')
+        message(paste0("Calculating Significance"))
     }
-    prep <- es.fn.prepare(gene.scores)
-    prep.null <- es.fn.prepare(gene.scores.null)
     sig <- rep(list(vector('list', n.gene.sets)), n.response)
     for (gs.i in seq_along(gene.sets.f)) {
-        if (verbose) {
-            message(paste0("Calculating ES (Gene Set ", gs.i, ")"))
-        }
-        gs.index <- match(gene.sets.f[[gs.i]], colnames(x))
-        s <- es.fn.run(gene.scores, gs.index, prep)
-        s.null <- es.fn.run(gene.scores.null, gs.index, prep.null)
-        if (verbose) {
-            message(paste0("Calculating Significance (Gene Set ", gs.i, ")"))
-        }
         for (response.i in seq(n.response)) {
-            sig[[response.i]][[gs.i]] <- sig.fun(s[response.i, 1],
-                                                 s.null[response.i, ])
+            sig[[response.i]][[gs.i]] <- sig.fun(es[gs.i, response.i],
+                                                 es.null[gs.i, response.i, ])
         }
     }
+
+    ################
+    # Prepare output
     bind_and_set_names <- function (s) {
         dplyr::mutate_(dplyr::bind_rows(s), GeneSet=~names(gene.sets.f))
     }
-    res <- lapply(sig, bind_and_set_names) 
+    res <- lapply(sig, bind_and_set_names)
     names(res) <- colnames(y)
     res
 }

@@ -88,7 +88,7 @@ gs = list(pw1=c('x1', 'x2', 'x3'), pw2=c('x2', 'x2.big'),
           pw3=c('x3', 'x5'))
 
 test_that("Same results", {
-    nperm = 1000
+    nperm = 10000
     x <- dplyr::select(d, starts_with('x'))
     y <- d$phenotype
     res_gsea <- run_gsea(x, y, gs,
