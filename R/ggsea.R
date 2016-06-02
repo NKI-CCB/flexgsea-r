@@ -131,46 +131,35 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
 
 #' @export
 ggsea_calc_sig_simple <- function (es, es.null) {
-    stopifnot(is.numeric(es))
-    stopifnot(length(es) == 1)
-    stopifnot(is.numeric(es.null))
-    if (length(es.null) == 0) {
-        dplyr::data_frame_(list(es = ~es))
-    } else {
-        dplyr::data_frame_(list(
-            es = ~es,
-            p.low = ~1-(sum(es > es.null) / length(es.null)),
-            p.high = ~1-(sum(es < es.null) / length(es.null)),
-            p=~min(p.low, p.high),
-            fdr=~p.adjust(p, 'BH'),
-            fwer=~p.adjust(p, 'bonferroni')
-        ))
-    }
+    ggsea_calc_sig(es, es.null, split.p=F)
 }
 
 #' @export
-ggsea_calc_sig_split <- function (es, es.null) {
+ggsea_calc_sig <- function (es, es.null, split.p=T) {
     stopifnot(is.numeric(es))
     stopifnot(length(es) == 1)
     stopifnot(is.numeric(es.null))
 
+    res <- dplyr::data_frame_(list(es = ~es))
     if (length(es.null) == 0) {
-        dplyr::data_frame_(list(es = ~es))
-    } else {
+        return (res)
+    }
+    if (split.p) {
         if (es >= 0.0) {
             es.null <- es.null[es.null >= 0.0]
-            p.perm <- sum(es <= es.null) / length(es.null)
+            res$p <- sum(es <= es.null) / length(es.null)
         } else {
             es.null <- es.null[es.null <= 0.0]
-            p.perm <- sum(es >= es.null) / length(es.null)
+            res$p <- sum(es >= es.null) / length(es.null)
         }
-        dplyr::data_frame_(list(
-            es = ~es,
-            p = ~p.perm,
-            fdr=~p.adjust(p, 'BH'),
-            fwer=~p.adjust(p, 'bonferroni')
-        ))
+    } else {
+        res$p.low = sum(es >= es.null) / length(es.null)
+        res$p.high = sum(es <= es.null) / length(es.null)
+        res$p = pmin(res$p.low, res$p.high)
     }
+    res$fdr=p.adjust(res$p, 'BH')
+    res$fwer=p.adjust(res$p, 'bonferroni')
+    res
 }
 
 #' @export
