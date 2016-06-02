@@ -112,11 +112,9 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         message(paste0("Calculating Significance"))
     }
     sig <- rep(list(vector('list', n.gene.sets)), n.response)
-    for (gs.i in seq_along(gene.sets.f)) {
-        for (response.i in seq(n.response)) {
-            sig[[response.i]][[gs.i]] <- sig.fun(es[gs.i, response.i],
-                                                 es.null[gs.i, response.i, ])
-        }
+    for (response.i in seq(n.response)) {
+        sig[[response.i]][[gs.i]] <- sig.fun(es[, response.i],
+                                             es.null[, response.i, ])
     }
 
     ################
@@ -137,25 +135,34 @@ ggsea_calc_sig_simple <- function (es, es.null) {
 #' @export
 ggsea_calc_sig <- function (es, es.null, split.p=T) {
     stopifnot(is.numeric(es))
-    stopifnot(length(es) == 1)
+    stopifnot(is.vector(es))
     stopifnot(is.numeric(es.null))
+    n.gene.sets <- length(es)
+    stopifnot(dim(es.null)[1] == n.gene.sets)
+    n.perm <- dim(es.null)[2]
 
     res <- dplyr::data_frame_(list(es = ~es))
-    if (length(es.null) == 0) {
+    if (n.perm == 0) {
         return (res)
     }
     if (split.p) {
-        if (es >= 0.0) {
-            es.null <- es.null[es.null >= 0.0]
-            res$p <- sum(es <= es.null) / length(es.null)
-        } else {
-            es.null <- es.null[es.null <= 0.0]
-            res$p <- sum(es >= es.null) / length(es.null)
-        }
+        res$p <- sapply(seq_len(n.gene.sets), function (gs.i) {
+            if (es[gs.i] >= 0.0) {
+                n <- es.null[gs.i, es.null[gs.i, ] >= 0.0]
+                sum(es[gs.i] <= n) / length(n)
+            } else {
+                n <- es.null[gs.i, es.null[gs.i, ] <= 0.0]
+                sum(es[gs.i] >= n) / length(n)
+            }
+        })
     } else {
-        res$p.low = sum(es >= es.null) / length(es.null)
-        res$p.high = sum(es <= es.null) / length(es.null)
-        res$p = pmin(res$p.low, res$p.high)
+        res$p.low <- sapply(seq_len(n.gene.sets), function (gs.i) {
+            sum(es[gs.i] >= es.null[gs.i, ]) / n.perm
+        })
+        res$p.high <- sapply(seq_len(n.gene.sets), function (gs.i) {
+            sum(es[gs.i] <= es.null[gs.i, ]) / n.perm
+        })
+        res$p <- pmin(res$p.low, res$p.high)
     }
     res$fdr=p.adjust(res$p, 'BH')
     res$fwer=p.adjust(res$p, 'bonferroni')
