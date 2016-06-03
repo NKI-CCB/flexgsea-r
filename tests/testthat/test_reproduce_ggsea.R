@@ -101,6 +101,4 @@ test_that("Same results", {
                  res[order(res$GeneSet), 'es'][[1]])
     expect_equal(res_gsea[order(res_gsea$GS), 'NOM p-val'][[1]],
                  res[order(res$GeneSet), 'p'][[1]], tolerance=(1/nperm)*100)
-    expect_equal(res_gsea[order(res_gsea$GS), 'FDR q-val'][[1]],
-                 res[order(res$GeneSet), 'fdr'][[1]])
 })

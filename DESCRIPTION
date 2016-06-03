@@ -1,6 +1,6 @@
 Package: ggsea
 Title: Gene Set Enrichment Analysis
-Version: 0.0.1
+Version: 0.9
 Authors@R: c(
 	person("Tycho", "Bismeijer", email = "t.bismeijer@nki.nl", role = c("aut", "cre")),
 	person(family="Netherlands Cancer Institute", role = c("cph")))
