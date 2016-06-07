@@ -2,3 +2,4 @@
 ^\.Rproj\.user$
 ^Makefile$
 ^tests/lib/.*$
+^\.travis\.yml$

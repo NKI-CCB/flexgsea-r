@@ -13,9 +13,22 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     }
     stopifnot(is.matrix(y))
     n.response <- ncol(y)
-    stopifnot(is.matrix(x))
-    n.genes <- ncol(x)
-    n.samples <- nrow(x)
+
+    if (is.matrix(x)) {
+        t.x <- F
+    } else if (methods::is(x, 'EList')) {
+        t.x <- T
+    } else {
+        stop('x should be a matrix or limma EList')
+    }
+
+    if (t.x) {
+        n.genes <- nrow(x)
+        n.samples <- ncol(x)
+    } else {
+        n.genes <- ncol(x)
+        n.samples <- nrow(x)
+    }
     stopifnot(n.samples == nrow(y))
 
     stopifnot(is.vector(block.size))
@@ -33,17 +46,30 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         stopifnot(is.character(gene.sets[[i]]))
     }
 
-    if (is.null(colnames(x))) {
+    if (t.x & is.null(rownames(x))) {
+        if(is.null(gene.names) | nrow(x) != length(gene.names)) {
+            stop("Gene names should be given in gene.name or as column",
+                 "names of x")
+        }
+        rownames(x) <- gene.names
+    } else if (!t.x & is.null(colnames(x))) {
         if(is.null(gene.names) | ncol(x) != length(gene.names)) {
             stop("Gene names should be given in gene.name or as column",
                  "names of x")
         }
         colnames(x) <- gene.names
+    } else if (t.x) {
+        gene.names <- rownames(x)
+    } else {
+        gene.names <- colnames(x)
     }
     if (is.null(colnames(y))) {
         colnames(y) <- paste0('Response ', seq(ncol(y)))
     }
-    gene.sets.f <- filter_gene_sets(gene.sets, colnames(x), 
+    if (verbose) {
+        message("Filtering gene sets on size in dataset")
+    }
+    gene.sets.f <- filter_gene_sets(gene.sets, gene.names, 
         gs.size.min=gs.size.min, gs.size.max=gs.size.max, verbose=verbose)
     n.gene.sets <- length(gene.sets.f)
     if (n.gene.sets == 0) {
@@ -55,7 +81,13 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     if (verbose) {
         message("Scoring Genes (Observed)")
     }
-    gene.scores <- gene.score.fn(x, y)
+    if ('t.x' %in% methods::formalArgs(formals(gene.score.fn))) {
+        gene.scores <- gene.score.fn(x, y, t.x=t.x)
+    } else {
+        gene.scores <- gene.score.fn(x, y)
+    }
+    stopifnot(!is.null(dim(gene.scores)))
+    stopifnot(dim(gene.scores) == c(n.genes, n.response))
     gene.scores <- array(gene.scores, c(dim(gene.scores), 1),
                      dimnames=c(dimnames(gene.scores), list(NULL)))
     if (verbose) {
@@ -64,7 +96,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     prep <- es.fn$prepare(gene.scores)
     es <- array(NA_real_, c(n.gene.sets, n.response))
     for (gs.i in seq_along(gene.sets.f)) {
-        gs.index <- match(gene.sets.f[[gs.i]], colnames(x))
+        gs.index <- match(gene.sets.f[[gs.i]], gene.names)
         s <- es.fn$run(gene.scores, gs.index, prep)
         stopifnot(dim(s)[2] == 1)
         es[gs.i, ] <- s[, 1]
@@ -91,6 +123,13 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         for (perm.i in seq_len(nperm.block)) {
             y.perm <- y[sample.int(nrow(y)),]
             gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
+            if (verbose) {
+                message(".", appendLF=F)
+                flush.console()
+            }
+        }
+        if (verbose) {
+            message("", appendLF=T)
         }
         if (verbose) {
             message(paste0("Calculating ES (Null) ", block.start, '--',
@@ -98,7 +137,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         }
         prep <- es.fn$prepare(gene.scores.null)
         for (gs.i in seq_along(gene.sets.f)) {
-            gs.index <- match(gene.sets.f[[gs.i]], colnames(x))
+            gs.index <- match(gene.sets.f[[gs.i]], gene.names)
             es.null[gs.i, , seq(block.start, block.end)] <-
                 es.fn$run(gene.scores.null, gs.index, prep)
         }
@@ -254,7 +293,6 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
     n.perm <- dim(gene.score)[3]
-
 
     es <- matrix(0.0, n.response, n.perm)
     for (i in seq(n.response)) {
