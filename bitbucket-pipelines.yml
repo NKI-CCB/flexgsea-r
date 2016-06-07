@@ -1,0 +1,11 @@
+# You can use a Docker image from Docker Hub or your own container
+# registry for your build environment.
+image: rocker/hadleyverse
+
+pipelines:
+  default:
+    - step:
+        script:
+          - R -e "install.packages('devtools')"
+          - R -e "devtools::install(dependencies=T)"
+          - R -e "devtools::test()"
