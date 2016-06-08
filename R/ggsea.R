@@ -1,4 +1,4 @@
-#' @importFrom stats lm sd
+#' @importFrom stats lm sd p.adjust
 
 #' @export
 ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
@@ -106,7 +106,12 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     ##################
     # Permutation test
 
-    es.null <- array(NA_real_, c(n.gene.sets, n.response, nperm))
+    es.null <- array(NA_real_,
+        dim=c(n.gene.sets, n.response, nperm),
+        dimnames=list(GeneSet=names(gene.sets.f),
+                      Response=colnames(y),
+                      perm=NULL)
+    )
     block.start <- 1
     while (block.start <= nperm) {
         block.end <- block.start + block.size - 1
@@ -125,7 +130,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
             gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
             if (verbose) {
                 message(".", appendLF=F)
-                flush.console()
+                utils::flush.console()
             }
         }
         if (verbose) {
@@ -163,7 +168,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     }
     res <- lapply(sig, bind_and_set_names)
     names(res) <- colnames(y)
-    res
+    list(table=res, es_null=es.null)
 }
 
 #' @export

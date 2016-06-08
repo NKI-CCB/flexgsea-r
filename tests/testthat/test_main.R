@@ -23,18 +23,30 @@ for (esf in list(ggsea_maxmean, ggsea_weighted_ks)) {
     test_that("ggsea result is a list", {
         expect_true(is.list(res))
     })
+    test_that("ggsea result table is a list", {
+        expect_true(is.list(res[['table']]))
+    })
     test_that("ggsea gives results for all predictors in order", {
-        expect_equal(names(res), colnames(y))
+        expect_equal(names(res[['table']]), colnames(y))
     })
     test_that("ggsea gives results for all pathways, in order", {
-        for (r in res) {
+        for (r in res[['table']]) {
             expect_equal(r$GeneSet, names(gs))
         }
     })
+    test_that("ggsea result null is an array", {
+        expect_true(is.array(res[['es_null']]))
+    })
+    test_that("ggsea gives results es_null for all pathways, in order", {
+        expect_equal(dimnames(res[['es_null']])[[1]], names(gs))
+    })
+    test_that("ggsea gives results es_null for all predictors in order", {
+        expect_equal(dimnames(res[['es_null']])[[2]], colnames(y))
+    })
     test_that("ggsea gives p values between 0 and 1", {
-        for (i in seq_along(res)) {
-            expect_true(all(res[[i]]$p >= 0.0))
-            expect_true(all(res[[i]]$p <= 1.0))
+        for (i in seq_along(res[['table']])) {
+            expect_true(all(res[['table']][[i]]$p >= 0.0))
+            expect_true(all(res[['table']][[i]]$p <= 1.0))
         }
     })
 }

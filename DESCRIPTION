@@ -9,6 +9,7 @@ Description: Get set enrichment analysis, with different measures, also linear
 Depends:
     R (>= 3.2.2),
 Imports:
+    methods,
     dplyr,
     readr,
     stringr
