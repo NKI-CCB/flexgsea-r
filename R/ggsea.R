@@ -173,11 +173,11 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
 
 #' @export
 ggsea_calc_sig_simple <- function (es, es.null) {
-    ggsea_calc_sig(es, es.null, split.p=F)
+    ggsea_calc_sig(es, es.null, split.p=F, calc.nes=F)
 }
 
 #' @export
-ggsea_calc_sig <- function (es, es.null, split.p=T) {
+ggsea_calc_sig <- function (es, es.null, split.p=T, calc.nes=T) {
     stopifnot(is.numeric(es))
     stopifnot(is.vector(es))
     stopifnot(is.numeric(es.null))
@@ -207,6 +207,15 @@ ggsea_calc_sig <- function (es, es.null, split.p=T) {
             sum(es[gs.i] <= es.null[gs.i, ]) / n.perm
         })
         res$p <- pmin(res$p.low, res$p.high)
+    }
+    if (calc.nes) {
+        pos.mean <- apply(es.null, 1, function (x) { mean(x[x>=0]) })
+        neg.mean <- apply(es.null, 1, function (x) { -mean(x[x<0]) })
+        pos.i = es >= 0
+        neg.i = es < 0
+        res$nes = rep(NA_real_, n.gene.sets)
+        res$nes[pos.i] = es[pos.i] / pos.mean[pos.i]
+        res$nes[neg.i] = es[neg.i] / neg.mean[neg.i]
     }
     res$fdr=p.adjust(res$p, 'BH')
     res$fwer=p.adjust(res$p, 'bonferroni')
