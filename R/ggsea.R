@@ -105,6 +105,36 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
 
     ##################
     # Permutation test
+    es.null <- ggsea_perm_sequential(x, y, gene.sets, gene.names, nperm,
+                                     block.size, gene.score.fn, es.fn,
+                                     verbose=verbose)
+
+    if (verbose) {
+        message(paste0("Calculating Significance"))
+    }
+    sig <- rep(list(vector('list', n.gene.sets)), n.response)
+    for (response.i in seq(n.response)) {
+        sig[[response.i]][[gs.i]] <- sig.fun(es[, response.i],
+                                             es.null[, response.i, ])
+    }
+
+    ################
+    # Prepare output
+    bind_and_set_names <- function (s) {
+        dplyr::mutate_(dplyr::bind_rows(s), GeneSet=~names(gene.sets))
+    }
+    res <- lapply(sig, bind_and_set_names)
+    names(res) <- colnames(y)
+    list(table=res, es_null=es.null)
+}
+
+ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
+                                  block.size, gene.score.fn, es.fn,
+                                  verbose=F) {
+    n.gene.sets <- length(gene.sets)
+    n.genes <- length(gene.names)
+    n.samples <- nrow(y)
+    n.response <- ncol(y)
 
     es.null <- array(NA_real_,
         dim=c(n.gene.sets, n.response, nperm),
@@ -151,24 +181,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         rm(prep)
         block.start <- block.end + 1
     }
-
-    if (verbose) {
-        message(paste0("Calculating Significance"))
-    }
-    sig <- rep(list(vector('list', n.gene.sets)), n.response)
-    for (response.i in seq(n.response)) {
-        sig[[response.i]][[gs.i]] <- sig.fun(es[, response.i],
-                                             es.null[, response.i, ])
-    }
-
-    ################
-    # Prepare output
-    bind_and_set_names <- function (s) {
-        dplyr::mutate_(dplyr::bind_rows(s), GeneSet=~names(gene.sets))
-    }
-    res <- lapply(sig, bind_and_set_names)
-    names(res) <- colnames(y)
-    list(table=res, es_null=es.null)
+    es.null
 }
 
 #' @export
