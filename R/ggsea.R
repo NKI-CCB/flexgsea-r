@@ -69,9 +69,9 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     if (verbose) {
         message("Filtering gene sets on size in dataset")
     }
-    gene.sets.f <- filter_gene_sets(gene.sets, gene.names, 
+    gene.sets <- filter_gene_sets(gene.sets, gene.names,
         gs.size.min=gs.size.min, gs.size.max=gs.size.max, verbose=verbose)
-    n.gene.sets <- length(gene.sets.f)
+    n.gene.sets <- length(gene.sets)
     if (n.gene.sets == 0) {
         warning("No valid gene sets after filtering for size.")
     }
@@ -95,8 +95,8 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     }
     prep <- es.fn$prepare(gene.scores)
     es <- array(NA_real_, c(n.gene.sets, n.response))
-    for (gs.i in seq_along(gene.sets.f)) {
-        gs.index <- match(gene.sets.f[[gs.i]], gene.names)
+    for (gs.i in seq_along(gene.sets)) {
+        gs.index <- match(gene.sets[[gs.i]], gene.names)
         s <- es.fn$run(gene.scores, gs.index, prep)
         stopifnot(dim(s)[2] == 1)
         es[gs.i, ] <- s[, 1]
@@ -108,7 +108,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
 
     es.null <- array(NA_real_,
         dim=c(n.gene.sets, n.response, nperm),
-        dimnames=list(GeneSet=names(gene.sets.f),
+        dimnames=list(GeneSet=names(gene.sets),
                       Response=colnames(y),
                       perm=NULL)
     )
@@ -141,8 +141,8 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
                            block.end))
         }
         prep <- es.fn$prepare(gene.scores.null)
-        for (gs.i in seq_along(gene.sets.f)) {
-            gs.index <- match(gene.sets.f[[gs.i]], gene.names)
+        for (gs.i in seq_along(gene.sets)) {
+            gs.index <- match(gene.sets[[gs.i]], gene.names)
             es.null[gs.i, , seq(block.start, block.end)] <-
                 es.fn$run(gene.scores.null, gs.index, prep)
         }
@@ -164,7 +164,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     ################
     # Prepare output
     bind_and_set_names <- function (s) {
-        dplyr::mutate_(dplyr::bind_rows(s), GeneSet=~names(gene.sets.f))
+        dplyr::mutate_(dplyr::bind_rows(s), GeneSet=~names(gene.sets))
     }
     res <- lapply(sig, bind_and_set_names)
     names(res) <- colnames(y)
