@@ -1,10 +1,11 @@
 #' @importFrom stats lm sd p.adjust
+#' @importFrom abind abind
 
 #' @export
 ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
                   sig.fun=ggsea_calc_sig_simple, gene.names=NULL,
                   nperm=1000, gs.size.min=10, gs.size.max=300,
-                  verbose=TRUE, block.size=1000) {
+                  verbose=TRUE, block.size=1000, parallel=NULL) {
 
     #########################
     # Prepare and check input
@@ -34,6 +35,20 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     stopifnot(is.vector(block.size))
     stopifnot(length(block.size) == 1)
     stopifnot(block.size > 0)
+
+    stopifnot(is.vector(nperm))
+    stopifnot(length(nperm) == 1)
+    
+    if (is.null(parallel)) { 
+        if ((nperm / block.size) > 1 && isNamespaceLoaded('foreach')) {
+            parallel = T
+        }  else {
+            parallel = F
+        }
+    }
+    if (parallel && !requireNamespace('foreach', quietly=T)) {
+        stop("foreach package required for parallel computation")
+    }
 
     if (is.character(gene.sets)) {
         if (verbose) {
@@ -105,9 +120,13 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
 
     ##################
     # Permutation test
-    es.null <- ggsea_perm_sequential(x, y, gene.sets, gene.names, nperm,
-                                     block.size, gene.score.fn, es.fn,
-                                     verbose=verbose)
+    if (parallel) {
+        perm.fun <- ggsea_perm_parallel
+    } else {
+        perm.fun <- ggsea_perm_sequential
+    }
+    es.null <- perm.fun(x, y, gene.sets, gene.names, nperm, block.size,
+                        gene.score.fn, es.fn, verbose=verbose)
 
     if (verbose) {
         message(paste0("Calculating Significance"))
@@ -177,9 +196,47 @@ ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
                 es.fn$run(gene.scores.null, gs.index, prep)
         }
 
-        rm(gene.scores.null)
-        rm(prep)
         block.start <- block.end + 1
+    }
+    es.null
+}
+
+ggsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
+                                block.size, gene.score.fn, es.fn, verbose=F) {
+    `%dopar%` <- foreach::`%dopar%`
+    n.gene.sets <- length(gene.sets)
+    n.genes <- length(gene.names)
+    n.samples <- nrow(y)
+    n.response <- ncol(y)
+
+    n.blocks <- ceiling(nperm / block.size)
+    block.i <- 0
+    es.null <- foreach::foreach(block.i=seq_len(n.blocks), .combine=abind,
+                                .inorder=F, .multicombine=T) %dopar% {
+        if (block.i==n.blocks & (nperm %% block.size) > 0) {
+            nperm.block <- nperm %% block.size
+        } else {
+            nperm.block <- block.size
+        }
+
+        gene.scores.null <- array(0, c(n.genes, n.response, nperm.block))
+        for (perm.i in seq_len(nperm.block)) {
+            y.perm <- y[sample.int(nrow(y)),]
+            gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
+        }
+        es.null.block <- array(NA_real_,
+            dim=c(n.gene.sets, n.response, nperm.block),
+            dimnames=list(GeneSet=names(gene.sets),
+                          Response=colnames(y),
+                          perm=NULL)
+        )
+        prep <- es.fn$prepare(gene.scores.null)
+        for (gs.i in seq_along(gene.sets)) {
+            gs.index <- match(gene.sets[[gs.i]], gene.names)
+            es.null.block[gs.i, , ] <-
+                es.fn$run(gene.scores.null, gs.index, prep)
+        }
+        es.null.block
     }
     es.null
 }

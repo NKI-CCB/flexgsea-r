@@ -1,4 +1,4 @@
-requireNamespace('dplyr')
+requireNamespace('dplyr', quietly=T)
 
 context("ggsea")
 
@@ -18,7 +18,15 @@ gs = list(pw1=c('x1', 'x2', 'x3'), pw2=c('x2', 'x2.big'),
           pw3=c('x3', 'x5'))
 
 for (esf in list(ggsea_maxmean, ggsea_weighted_ks)) {
-    res <- ggsea(x, y, gs, es.fn=esf, nperm=10, verbose=F, gs.size.min=1)
+for (parallel in c(T,F,NULL)) {
+    if (parallel && !(requireNamespace('foreach', quietly=T) ||
+                      requireNamespace('doMC', quietly=T))) {
+        next
+    } else {
+        doMC::registerDoMC(2)
+    }
+    res <- ggsea(x, y, gs, es.fn=esf, nperm=100, verbose=F, gs.size.min=1,
+                 block.size=11, parallel=parallel)
 
     test_that("ggsea result is a list", {
         expect_true(is.list(res))
@@ -49,4 +57,4 @@ for (esf in list(ggsea_maxmean, ggsea_weighted_ks)) {
             expect_true(all(res[['table']][[i]]$p <= 1.0))
         }
     })
-}
+}}

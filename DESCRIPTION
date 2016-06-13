@@ -12,9 +12,12 @@ Imports:
     methods,
     dplyr,
     readr,
-    stringr
+    stringr,
+    abind
 License: MIT + file LICENSE
 LazyData: true
 Suggests:
-    testthat
+    testthat,
+    doMC,
+    foreach
 RoxygenNote: 5.0.1

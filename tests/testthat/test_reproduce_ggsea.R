@@ -1,9 +1,17 @@
-requireNamespace('dplyr')
+requireNamespace('dplyr', quietly=T)
 
 check_gsea_r <- function () {
     if (!dir.exists('../lib/GSEA-P-R')) {
         skip("GSEA-P-R not available")
     }
+}
+
+if (requireNamespace('foreach', quietly=T) &&
+        requireNamespace('doMC', quietly=T)) {
+    parallel=T
+    doMC::registerDoMC()
+} else {
+    warning('Skipping parallel tests')
 }
 
 # Write GCT file for GSEA
@@ -96,7 +104,7 @@ test_that("Same results", {
     res <- ggsea(data.matrix(x), y, gs,
         gene.score.fn=ggsea_s2n, es.fn=ggsea_weighted_ks,
         sig.fun=ggsea_calc_sig, nperm=nperm, verbose=F,
-        gs.size.min=1)$table[[1]]
+        gs.size.min=1, block.size=100, parallel=T)$table[[1]]
     expect_equal(res_gsea[order(res_gsea$GS), 'ES'][[1]],
                  res[order(res$GeneSet), 'es'][[1]])
     expect_equal(res_gsea[order(res_gsea$GS), 'NES'][[1]],
