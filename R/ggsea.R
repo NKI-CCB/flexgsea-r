@@ -110,11 +110,25 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     }
     prep <- es.fn$prepare(gene.scores)
     es <- array(NA_real_, c(n.gene.sets, n.response))
+
+    extra_stats <- structure(
+        rep(list(array(NA_real_, dim(es))), length(es.fn$extra_stats)),
+        names=es.fn$extra_stats)
+    extra <- structure(
+        rep(structure(vector('list', n.gene.sets), names=names(gene.sets)),
+            length(es.fn$extra)),
+        names=es.fn$extra)
     for (gs.i in seq_along(gene.sets)) {
         gs.index <- match(gene.sets[[gs.i]], gene.names)
-        s <- es.fn$run(gene.scores, gs.index, prep)
-        stopifnot(dim(s)[2] == 1)
-        es[gs.i, ] <- s[, 1]
+        s <- es.fn$run(gene.scores, gs.index, prep, ret_extra=T)
+        stopifnot(dim(s$es)[2] == 1)
+        es[gs.i, ] <- s$es[, 1]
+        for (n in names(extra_stats)) {
+            extra_stats[[n]][gs.i, ] <- s[[n]][, 1]
+        }
+        for (n in names(extra)) {
+            extra[[n]][[gs.i]] <- lapply(s[[n]], `[[`, 1)
+        }
     }
     rm(prep, gene.scores)
 
@@ -136,13 +150,16 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         sig[[response.i]] <- sig.fun(es[, response.i],
                                      es.null[, response.i, ],
                                      verbose)
+        for (n in names(extra_stats)) {
+            sig[[response.i]][[n]] <- extra_stats[[n]][, response.i]
+        }
     }
 
     ################
     # Prepare output
     res <- lapply(sig, dplyr::mutate_, GeneSet=~names(gene.sets))
     names(res) <- colnames(y)
-    list(table=res, es_null=es.null)
+    list(table=res, es_null=es.null, extra=extra)
 }
 
 ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
@@ -191,7 +208,7 @@ ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
         for (gs.i in seq_along(gene.sets)) {
             gs.index <- match(gene.sets[[gs.i]], gene.names)
             es.null[gs.i, , seq(block.start, block.end)] <-
-                es.fn$run(gene.scores.null, gs.index, prep)
+                es.fn$run(gene.scores.null, gs.index, prep, ret_extra=F)$es
         }
 
         block.start <- block.end + 1
@@ -232,7 +249,7 @@ ggsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
         for (gs.i in seq_along(gene.sets)) {
             gs.index <- match(gene.sets[[gs.i]], gene.names)
             es.null.block[gs.i, , ] <-
-                es.fn$run(gene.scores.null, gs.index, prep)
+                es.fn$run(gene.scores.null, gs.index, prep, ret_extra=F)$es
         }
         es.null.block
     }
@@ -381,51 +398,69 @@ ggsea_s2n <- function (x, y, abs=F) {
     coef
 }
 
-ggsea_maxmean_ <- function(gene.score, gene.set, prep) {
+ggsea_maxmean_ <- function(gene.score, gene.set, prep, ret_extra=F) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
     n.perm <- dim(gene.score)[3]
 
+    res <- list()
     gs.o <- gene.score[gene.set, , ,drop=F]
     abs.gs.o <- abs(gs.o)
     pos <- apply((gs.o + abs.gs.o) / 2, 3, colMeans)
     neg <- apply((-gs.o + abs.gs.o) / 2, 3, colMeans)
-    res <- pmax(pos, neg)
-    res[neg > pos] = -1 * res[neg > pos]
-    rownames(res) <- colnames(gene.score)
+    res$es <- pmax(pos, neg)
+    res$es[neg > pos] = -1 * res$es[neg > pos]
+    rownames(res$es) <- colnames(gene.score)
+
     res
 }
 
 #' @export
 ggsea_maxmean <- list(
     run = ggsea_maxmean_,
-    prepare = function(gene.score) { list() }
+    prepare = function(gene.score) { list() },
+    extra_stats = character()
 )
 
-ggsea_mean_ <- function(gene.score, gene.set, prep) {
+ggsea_mean_ <- function(gene.score, gene.set, prep, ret_extra=F) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
     n.perm <- dim(gene.score)[3]
 
+    res <- list()
     gs.o <- gene.score[gene.set, , ,drop=F]
-    res <- apply(gs.o, 3, colMeans)
-    rownames(res) <- colnames(gene.score)
+    res$es <- apply(gs.o, 3, colMeans)
+    rownames(res$es) <- colnames(gene.score)
+
     res
 }
 
 #' @export
 ggsea_mean <- list(
     run = ggsea_mean_,
-    prepare = function(gene.score) { list() }
+    prepare = function(gene.score) { list() },
+    extra_stats = character()
 )
 
-ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0) {
+ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
+                               ret_extra=F) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
     n.perm <- dim(gene.score)[3]
 
-    es <- matrix(0.0, n.response, n.perm)
+    res <- list()
+    res$es <- matrix(0.0, n.response, n.perm)
+    if (ret_extra) {
+        res$max_es_at <- matrix(0.0, n.response, n.perm)
+        res$le_prop <- matrix(0.0, n.response, n.perm)
+        res$leading_edge <- list()
+        res$running_es <- list()
+    }
     for (i in seq(n.response)) {
+        if (ret_extra) {
+            res$leading_edge[[i]] <- list()
+            res$running_es[[i]] <- list()
+        }
         for (j in seq_len(n.perm)) {
             g.o <- prep$gene.order[, i, j]
             gs.i <- rep(0, total.n.genes)
@@ -437,14 +472,29 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0) {
             p.min <- min(p.r)
             p.max <- max(p.r)
             if (p.max > abs(p.min)) {
-                es[i, j] = p.max
+                res$es[i, j] = p.max
             } else {
-                es[i, j] = p.min
+                res$es[i, j] = p.min
             }
-
+            if (ret_extra) {
+                res$running_es[[i]][[j]] <- p.r
+                if (p.max > abs(p.min)) {
+                    w.p.max <- which.max(p.r)
+                    res$max_es_at[i, j] <- w.p.max
+                    res$leading_edge[[i]][[j]] <-
+                        which(gs.i[g.o][1:w.p.max] > 0)
+                } else {
+                    w.p.min <- which.min(p.r)
+                    res$max_es_at[i, j] <- w.p.min
+                    res$leading_edge[[i]][[j]] <-
+                        which(gs.i[g.o][w.p.min:length(gs.i)] > 0)
+                }
+                res$le_prop[i, j] <- length(res$leading_edge[[i]][[j]]) /
+                    length(gene.set)
+            }
         }
     }
-    es
+    res
 }
 #' @export
 ggsea_weighted_ks <- list(
@@ -452,7 +502,9 @@ ggsea_weighted_ks <- list(
     prepare = function(gene.score) {
         gene.order <- apply(gene.score, c(2, 3), order, decreasing=T)
         list(gene.order = gene.order)
-    }
+    },
+    extra_stats = c('max_es_at', 'le_prop'),
+    extra = c('running_es', 'leading_edge')
 )
 
 filter_gene_sets <- function(gene.sets, gene.names, gs.size.min=10,

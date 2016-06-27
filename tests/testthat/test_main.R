@@ -18,7 +18,7 @@ gs = list(pw1=c('x1', 'x2', 'x3'), pw2=c('x2', 'x2.big'),
           pw3=c('x3', 'x5'))
 
 for (esf in list(ggsea_maxmean, ggsea_weighted_ks)) {
-for (parallel in c(T,F,NULL)) {
+for (parallel in c(F,T,NULL)) {
     if (parallel && !(requireNamespace('foreach', quietly=T) ||
                       requireNamespace('doMC', quietly=T))) {
         next
