@@ -131,19 +131,16 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     if (verbose) {
         message(paste0("Calculating Significance"))
     }
-    sig <- rep(list(vector('list', n.gene.sets)), n.response)
+    sig <- vector('list', n.response)
     for (response.i in seq(n.response)) {
-        sig[[response.i]][[gs.i]] <- sig.fun(es[, response.i],
-                                             es.null[, response.i, ],
-                                             verbose)
+        sig[[response.i]] <- sig.fun(es[, response.i],
+                                     es.null[, response.i, ],
+                                     verbose)
     }
 
     ################
     # Prepare output
-    bind_and_set_names <- function (s) {
-        dplyr::mutate_(dplyr::bind_rows(s), GeneSet=~names(gene.sets))
-    }
-    res <- lapply(sig, bind_and_set_names)
+    res <- lapply(sig, dplyr::mutate_, GeneSet=~names(gene.sets))
     names(res) <- colnames(y)
     list(table=res, es_null=es.null)
 }
