@@ -1,6 +1,13 @@
 #' @importFrom stats lm sd p.adjust
 #' @importFrom abind abind
 
+named_full_list <- function(value, names) {
+    structure(rep(list(value), length(names)), names=names)
+}
+named_empty_list <- function(names) {
+    structure(vector('list', length(names)), names=names)
+}
+
 #' @export
 ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
                   sig.fun=ggsea_calc_sig_simple, gene.names=NULL,
@@ -114,20 +121,23 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     extra_stats <- structure(
         rep(list(array(NA_real_, dim(es))), length(es.fn$extra_stats)),
         names=es.fn$extra_stats)
-    extra <- structure(
-        rep(structure(vector('list', n.gene.sets), names=names(gene.sets)),
-            length(es.fn$extra)),
+    extra <- named_full_list(
+        named_full_list(
+            named_empty_list(names=names(gene.sets)),
+            names=colnames(y)),
         names=es.fn$extra)
     for (gs.i in seq_along(gene.sets)) {
         gs.index <- match(gene.sets[[gs.i]], gene.names)
         s <- es.fn$run(gene.scores, gs.index, prep, ret_extra=T)
-        stopifnot(dim(s$es)[2] == 1)
+        stopifnot(dim(s$es)[2] == 1)  # one 'permutation'
         es[gs.i, ] <- s$es[, 1]
         for (n in names(extra_stats)) {
             extra_stats[[n]][gs.i, ] <- s[[n]][, 1]
         }
         for (n in names(extra)) {
-            extra[[n]][[gs.i]] <- lapply(s[[n]], `[[`, 1)
+            for (response.i in seq(n.response)) {
+                extra[[n]][[response.i]][[gs.i]] <- s[[n]][[response.i]][[1]]
+            }
         }
     }
     rm(prep, gene.scores)
@@ -157,9 +167,15 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
 
     ################
     # Prepare output
-    res <- lapply(sig, dplyr::mutate_, GeneSet=~names(gene.sets))
-    names(res) <- colnames(y)
-    list(table=res, es_null=es.null, extra=extra)
+    res_table <- lapply(sig, dplyr::mutate_, GeneSet=~names(gene.sets))
+    names(res_table) <- colnames(y)
+    res <- list(table=res_table, es_null=es.null, gene_names=gene.names)
+    for (n in names(extra)) {
+        if (!(n %in% names(res))) {
+            res[[n]] <- extra[[n]]
+        }
+    }
+    res
 }
 
 ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
