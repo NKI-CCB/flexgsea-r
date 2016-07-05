@@ -275,13 +275,23 @@ calc_fdr_nes <- function (nes, nes_null, verbose=F) {
         }
 
         if (nes[gs_i] >= 0) {
-            rel_rank <- sum(nes >= nes[gs_i]) / nes_count_pos
+            if (nes_count_pos > 0) {
+                rel_rank <- sum(nes >= nes[gs_i]) / nes_count_pos
+            } else {
+                rel_rank <- 1.0
+            }
             rel_rank_null <- apply(nes_null >= nes[gs_i], 2, sum) /
                 nes_null_count_pos
+            rel_rank_null[nes_null_count_pos == 0] = 1.0
         } else {
-            rel_rank <- sum(nes < nes[gs_i]) / nes_count_neg
+            if (nes_count_neg > 0) {
+                rel_rank <- sum(nes < nes[gs_i]) / nes_count_neg
+            } else {
+                rel_rank <- 1.0
+            }
             rel_rank_null <- apply(nes_null < nes[gs_i], 2, sum) /
                 nes_null_count_neg
+            rel_rank_null[nes_null_count_neg == 0] = 1.0
         }
         if (rel_rank > 0.0) {
             fdr[gs_i] <- mean(rel_rank_null) / rel_rank
@@ -344,6 +354,10 @@ ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F) {
     if (calc.nes) {
         mean_es_null_pos <- apply(es_null, 1, function (e) { mean(e[e>=0]) })
         mean_es_null_neg <- apply(es_null, 1, function (e) { mean(e[e<0]) })
+        mean_es_null_pos_nar = is.na(mean_es_null_pos) & es >= 0.0
+        mean_es_null_pos[mean_es_null_pos_nar] <- es[mean_es_null_pos_nar]
+        mean_es_null_neg_nar = is.na(mean_es_null_neg) & es < 0.0
+        mean_es_null_neg[mean_es_null_neg_nar] <- es[mean_es_null_neg_nar]
         res$nes <- es / ifelse(es >= 0, mean_es_null_pos, -mean_es_null_neg)
         nes_null <- apply(es_null, 2, function (esn) {
             esn / ifelse(esn >= 0, mean_es_null_pos, -mean_es_null_neg)
