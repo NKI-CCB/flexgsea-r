@@ -378,7 +378,7 @@ ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F) {
         nes_null <- apply(es_null, 2, function (esn) {
             esn / ifelse(esn >= 0, mean_es_null_pos, -mean_es_null_neg)
         })
-        fdr <- calc_fdr_nes(res$nes, nes_null, verbose)
+        res$fdr <- calc_fdr_nes(res$nes, nes_null, verbose)
     } else {
         res$fdr=p.adjust(res$p, 'BH')
     }
