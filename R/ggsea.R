@@ -12,7 +12,7 @@ named_empty_list <- function(names) {
 ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
                   sig.fun=ggsea_calc_sig_simple, gene.names=NULL,
                   nperm=1000, gs.size.min=10, gs.size.max=300,
-                  verbose=TRUE, block.size=1000, parallel=NULL) {
+                  verbose=TRUE, block.size=1000, parallel=NULL, abs=F) {
 
     #########################
     # Prepare and check input
@@ -104,9 +104,9 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         message("Scoring Genes (Observed)")
     }
     if ('t.x' %in% methods::formalArgs(formals(gene.score.fn))) {
-        gene.scores <- gene.score.fn(x, y, t.x=t.x)
+        gene.scores <- gene.score.fn(x, y, t.x=t.x, abs=abs)
     } else {
-        gene.scores <- gene.score.fn(x, y)
+        gene.scores <- gene.score.fn(x, y, abs=abs)
     }
     stopifnot(!is.null(dim(gene.scores)))
     stopifnot(dim(gene.scores) == c(n.genes, n.response))
@@ -150,7 +150,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
         perm.fun <- ggsea_perm_sequential
     }
     es.null <- perm.fun(x, y, gene.sets, gene.names, nperm, block.size,
-                        gene.score.fn, es.fn, verbose=verbose)
+                        gene.score.fn, es.fn, abs=abs, verbose=verbose)
 
     if (verbose) {
         message(paste0("Calculating Significance"))
@@ -159,7 +159,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
     for (response.i in seq(n.response)) {
         sig[[response.i]] <- sig.fun(es[, response.i],
                                      es.null[, response.i, ],
-                                     verbose)
+                                     verbose=verbose, abs=abs)
         for (n in names(extra_stats)) {
             sig[[response.i]][[n]] <- extra_stats[[n]][, response.i]
         }
@@ -180,7 +180,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
 
 ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
                                   block.size, gene.score.fn, es.fn,
-                                  verbose=F) {
+                                  abs=F, verbose=F) {
     n.gene.sets <- length(gene.sets)
     n.genes <- length(gene.names)
     n.samples <- nrow(y)
@@ -207,7 +207,7 @@ ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
         }
         for (perm.i in seq_len(nperm.block)) {
             y.perm <- y[sample.int(nrow(y)),]
-            gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
+            gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm, abs=abs)
             if (verbose) {
                 message(".", appendLF=F)
                 utils::flush.console()
@@ -233,7 +233,8 @@ ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
 }
 
 ggsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
-                                block.size, gene.score.fn, es.fn, verbose=F) {
+                                block.size, gene.score.fn, es.fn, abs=F,
+                                verbose=F) {
     `%dopar%` <- foreach::`%dopar%`
     n.gene.sets <- length(gene.sets)
     n.genes <- length(gene.names)
@@ -253,7 +254,7 @@ ggsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
         gene.scores.null <- array(0, c(n.genes, n.response, nperm.block))
         for (perm.i in seq_len(nperm.block)) {
             y.perm <- y[sample.int(nrow(y)),]
-            gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm)
+            gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm, abs=abs)
         }
         es.null.block <- array(NA_real_,
             dim=c(n.gene.sets, n.response, nperm.block),
@@ -272,7 +273,7 @@ ggsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
     es.null
 }
 
-calc_fdr_nes <- function (nes, nes_null, verbose=F) {
+calc_fdr_nes <- function (nes, nes_null, verbose=F, abs=F) {
     nes_count_pos <- sum(nes >= 0)
     nes_count_neg <- sum(nes < 0)
     nes_null_count_pos <- apply(nes_null, 2, function (nes) { sum(nes >= 0) })
@@ -290,7 +291,7 @@ calc_fdr_nes <- function (nes, nes_null, verbose=F) {
             utils::flush.console()
         }
 
-        if (nes[gs_i] >= 0) {
+        if ((nes[gs_i] >= 0) | abs) {
             if (nes_count_pos > 0) {
                 rel_rank <- sum(nes >= nes[gs_i]) / nes_count_pos
             } else {
@@ -320,23 +321,35 @@ calc_fdr_nes <- function (nes, nes_null, verbose=F) {
     }
     fdr_adj <- fdr
     min_fdr <- 1.0
-    for (i in order(fdr, decreasing=T)) {
+    for (i in order(nes, decreasing=F)[nes >= 0]) {
         if (fdr_adj[i] > min_fdr) {
             fdr_adj[i] <- min_fdr
         } else {
             min_fdr <- fdr_adj[i]
         }
     }
+    if (!abs) {
+        min_fdr <- 1.0
+        for (i in order(nes, decreasing=T)[nes < 0]) {
+            if (fdr_adj[i] > min_fdr) {
+                fdr_adj[i] <- min_fdr
+            } else {
+                min_fdr <- fdr_adj[i]
+            }
+        }
+    }
     fdr_adj
 }
 
 #' @export
-ggsea_calc_sig_simple <- function (es, es.null, verbose=F) {
-    ggsea_calc_sig(es, es.null, split.p=F, calc.nes=F, verbose=verbose)
+ggsea_calc_sig_simple <- function (es, es.null, verbose=F, abs=F) {
+    ggsea_calc_sig(es, es.null, split.p=F, calc.nes=F, verbose=verbose,
+                   abs=abs)
 }
 
 #' @export
-ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F) {
+ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F,
+                            abs=F) {
     stopifnot(is.numeric(es))
     stopifnot(is.vector(es))
     stopifnot(is.numeric(es_null))
@@ -350,7 +363,7 @@ ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F) {
     }
     if (split.p) {
         res$p <- sapply(seq_len(n.gene.sets), function (gs.i) {
-            if (es[gs.i] >= 0.0) {
+            if ((es[gs.i] >= 0.0) | abs) {
                 n <- es_null[gs.i, es_null[gs.i, ] >= 0.0]
                 sum(es[gs.i] <= n) / length(n)
             } else {
@@ -359,26 +372,41 @@ ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F) {
             }
         })
     } else {
-        res$p.low <- sapply(seq_len(n.gene.sets), function (gs.i) {
-            sum(es[gs.i] >= es_null[gs.i, ]) / n.perm
-        })
         res$p.high <- sapply(seq_len(n.gene.sets), function (gs.i) {
             sum(es[gs.i] <= es_null[gs.i, ]) / n.perm
         })
-        res$p <- pmin(res$p.low, res$p.high)
+        if (abs) {
+            res$p <- res$p.high
+        } else {
+            res$p.low <- sapply(seq_len(n.gene.sets), function (gs.i) {
+                sum(es[gs.i] >= es_null[gs.i, ]) / n.perm
+            })
+            res$p <- pmin(pmin(res$p.low, res$p.high) * 2, 1.0)
+        }
     }
     if (calc.nes) {
         mean_es_null_pos <- apply(es_null, 1, function (e) { mean(e[e>=0]) })
-        mean_es_null_neg <- apply(es_null, 1, function (e) { mean(e[e<0]) })
         mean_es_null_pos_nar = is.na(mean_es_null_pos) & es >= 0.0
         mean_es_null_pos[mean_es_null_pos_nar] <- es[mean_es_null_pos_nar]
-        mean_es_null_neg_nar = is.na(mean_es_null_neg) & es < 0.0
-        mean_es_null_neg[mean_es_null_neg_nar] <- es[mean_es_null_neg_nar]
-        res$nes <- es / ifelse(es >= 0, mean_es_null_pos, -mean_es_null_neg)
-        nes_null <- apply(es_null, 2, function (esn) {
-            esn / ifelse(esn >= 0, mean_es_null_pos, -mean_es_null_neg)
-        })
-        res$fdr <- calc_fdr_nes(res$nes, nes_null, verbose)
+
+        if (abs) {
+            res$nes <- es / mean_es_null_pos
+            nes_null <- apply(es_null, 2, function (esn) {
+                esn / mean_es_null_pos
+            })
+        } else {
+            mean_es_null_neg <- apply(es_null, 1, function (e) {
+                mean(e[e<0])
+            })
+            mean_es_null_neg_nar = is.na(mean_es_null_neg) & es < 0.0
+            mean_es_null_neg[mean_es_null_neg_nar] <- es[mean_es_null_neg_nar]
+            res$nes <- es /
+                ifelse(es >= 0, mean_es_null_pos, -mean_es_null_neg)
+            nes_null <- apply(es_null, 2, function (esn) {
+                esn / ifelse(esn >= 0, mean_es_null_pos, -mean_es_null_neg)
+            })
+        }
+        res$fdr <- calc_fdr_nes(res$nes, nes_null, verbose=verbose, abs=abs)
     } else {
         res$fdr=p.adjust(res$p, 'BH')
     }
