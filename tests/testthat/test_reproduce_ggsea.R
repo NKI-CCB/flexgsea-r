@@ -1,4 +1,5 @@
 requireNamespace('dplyr', quietly=T)
+requireNamespace('stringr', quietly=T)
 
 check_gsea_r <- function () {
     if (!dir.exists('../lib/GSEA-P-R')) {
@@ -97,7 +98,7 @@ gs = list(pw1=c('x1', 'x2', 'x3'), pw2=c('x2', 'x2.big'),
 
 test_that("Same results", {
     nperm = 10000
-    x <- dplyr::select(d, starts_with('x'))
+    x <- dplyr::select(d, dplyr::starts_with('x'))
     y <- d$phenotype
     res_gsea <- run_gsea(x, y, gs,
         gs.size.threshold.min=1, topgs=min(length(gs), 10), nperm=nperm)

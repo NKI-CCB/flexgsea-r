@@ -11,8 +11,8 @@ d = dplyr::data_frame(
     x5 = c(0.1979672, -1.0453921, -0.1528823,  0.0897534),
     y1 = c(0.19801108, -1.05384953, -0.15942901,  0.09702427),
     y2 = c(1.793303,  1.589571, -1.412860,  2.192915))
-x = data.matrix(dplyr::select(d, starts_with('x')))
-y = data.matrix(dplyr::select(d, starts_with('y')))
+x = data.matrix(dplyr::select(d, dplyr::starts_with('x')))
+y = data.matrix(dplyr::select(d, dplyr::starts_with('y')))
 
 gs = list(pw1=c('x1', 'x2', 'x3'), pw2=c('x2', 'x2.big'),
           pw3=c('x3', 'x5'))

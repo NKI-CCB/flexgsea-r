@@ -10,8 +10,8 @@ d = dplyr::data_frame(
     x4 = -c(0.1979443, -1.0453220, -0.1528467,  0.0897873),
     y1 = c(0.19801108, -1.05384953, -0.15942901,  0.09702427),
     y2 = c(1.793303,  1.589571, -1.412860,  2.192915))
-x = data.matrix(dplyr::select(d, starts_with('x')))
-y = data.matrix(dplyr::select(d, starts_with('y')))
+x = data.matrix(dplyr::select(d, dplyr::starts_with('x')))
+y = data.matrix(dplyr::select(d, dplyr::starts_with('y')))
 
 scores <- ggsea_lm(x, y)
 scores.abs <- ggsea_lm(x, y, abs=T)

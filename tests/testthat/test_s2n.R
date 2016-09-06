@@ -10,8 +10,8 @@ d = dplyr::data_frame(
     x4 = -c(0.1979443, -1.0453220, -0.1528467,  0.0897873),
     y1 = c('a', 'b', 'b',  'a'),
     y2 = c(1,  1, 0,  0))
-x = data.matrix(dplyr::select(d, starts_with('x')))
-y = as.matrix(dplyr::select(d, starts_with('y')))
+x = data.matrix(dplyr::select(d, dplyr::starts_with('x')))
+y = as.matrix(dplyr::select(d, dplyr::starts_with('y')))
 
 scores <- ggsea_s2n(x, y)
 scores.abs <- ggsea_s2n(x, y, abs=T)
