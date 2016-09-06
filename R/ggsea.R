@@ -273,6 +273,31 @@ ggsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
     es.null
 }
 
+adj_fdr_nes <- function (fdr, nes) {
+    fdr_adj <- fdr
+    min_fdr <- 1.0
+    fdr_p <- fdr[nes >= 0]
+    for (i in order(nes[nes >= 0], decreasing=F)) {
+        if (fdr_p[i] <= min_fdr) {
+            min_fdr <- fdr_p[i]
+        } else {
+            fdr_p[i] <- min_fdr
+        }
+    }
+    fdr_adj[nes >= 0] <- fdr_p
+
+    min_fdr <- 1.0
+    fdr_n <- fdr[nes < 0]
+    for (i in order(nes[nes < 0], decreasing=T)) {
+        if (fdr_n[i] <= min_fdr) {
+            min_fdr <- fdr_n[i]
+        } else {
+            fdr_n[i] <- min_fdr
+        }
+    }
+    fdr_adj[nes < 0] <- fdr_n
+}
+
 calc_fdr_nes <- function (nes, nes_null, verbose=F, abs=F) {
     nes_count_pos <- sum(nes >= 0)
     nes_count_neg <- sum(nes < 0)
@@ -317,29 +342,11 @@ calc_fdr_nes <- function (nes, nes_null, verbose=F, abs=F) {
         }
     }
     if (verbose) {
-        message("")
+        message("Adjusting FDR")
     }
-    fdr_adj <- fdr
-    min_fdr <- 1.0
-    for (i in order(nes, decreasing=F)[nes >= 0]) {
-        if (fdr_adj[i] > min_fdr) {
-            fdr_adj[i] <- min_fdr
-        } else {
-            min_fdr <- fdr_adj[i]
-        }
-    }
-    if (!abs) {
-        min_fdr <- 1.0
-        for (i in order(nes, decreasing=T)[nes < 0]) {
-            if (fdr_adj[i] > min_fdr) {
-                fdr_adj[i] <- min_fdr
-            } else {
-                min_fdr <- fdr_adj[i]
-            }
-        }
-    }
-    fdr_adj
+    adj_fdr_nes(fdr, nes)
 }
+
 
 #' @export
 ggsea_calc_sig_simple <- function (es, es.null, verbose=F, abs=F) {
