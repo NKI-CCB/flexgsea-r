@@ -296,6 +296,7 @@ adj_fdr_nes <- function (fdr, nes) {
         }
     }
     fdr_adj[nes < 0] <- fdr_n
+    fdr_adj
 }
 
 calc_fdr_nes <- function (nes, nes_null, verbose=F, abs=F) {
