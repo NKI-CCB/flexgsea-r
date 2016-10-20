@@ -26,7 +26,8 @@ for (parallel in c(F,T,NULL)) {
         doMC::registerDoMC(2)
     }
     res <- ggsea(x, y, gs, es.fn=esf, nperm=100, verbose=F, gs.size.min=1,
-                 block.size=11, parallel=parallel, gene.score.fn=ggsea_lm)
+                 block.size=11, parallel=parallel, gene.score.fn=ggsea_lm,
+                 return_values=c('es_null'))
 
     test_that("ggsea result is a list", {
         expect_true(is.list(res))

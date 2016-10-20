@@ -13,7 +13,8 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
                   es.fn=ggsea_weighted_ks, sig.fun=ggsea_calc_sig,
                   gene.names=NULL, nperm=1000, gs.size.min=10,
                   gs.size.max=300, verbose=TRUE, block.size=100,
-                  parallel=NULL, abs=F) {
+                  parallel=NULL, abs=F, return_values=character(),
+                  return_stats=T) {
 
     #########################
     # Prepare and check input
@@ -46,6 +47,16 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
 
     stopifnot(is.vector(nperm))
     stopifnot(length(nperm) == 1)
+
+    stopifnot(is.character(return_values))
+    '' %in% return_values # Try this, so it fails fast, not after permutations.
+    if (return_stats == T) {
+        return_stats <- es.fn$extra_stats
+    } else if (return_stats == F) {
+        return_stats = character(0)
+    }
+    stopifnot(is.character(return_stats))
+    '' %in% return_stats # Try this, so it fails fast, not after permutations.
     
     if (is.null(parallel)) { 
         if ((nperm / block.size) > 1 && isNamespaceLoaded('foreach')) {
@@ -120,8 +131,9 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
     es <- array(NA_real_, c(n.gene.sets, n.response))
 
     extra_stats <- structure(
-        rep(list(array(NA_real_, dim(es))), length(es.fn$extra_stats)),
-        names=es.fn$extra_stats)
+        rep(list(array(NA_real_, dim(es))), length(return_stats)),
+        names=return_stats)
+    extra = intersect(es.fn$extra, return_values)
     extra <- named_full_list(
         named_full_list(
             named_empty_list(names=names(gene.sets)),
@@ -129,7 +141,8 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
         names=es.fn$extra)
     for (gs.i in seq_along(gene.sets)) {
         gs.index <- match(gene.sets[[gs.i]], gene.names)
-        s <- es.fn$run(gene.scores, gs.index, prep, ret_extra=T)
+        s <- es.fn$run(gene.scores, gs.index, prep,
+                       return_values=return_values, return_stats=return_stats)
         stopifnot(dim(s$es)[2] == 1)  # one 'permutation'
         es[gs.i, ] <- s$es[, 1]
         for (n in names(extra_stats)) {
@@ -170,9 +183,15 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
     # Prepare output
     res_table <- lapply(sig, dplyr::mutate_, GeneSet=~names(gene.sets))
     names(res_table) <- colnames(y)
-    res <- list(table=res_table, es_null=es.null, gene_names=gene.names)
+    res <- list(table=res_table)
+    if ('es_null' %in% return_values) {
+        res$es_null=es.null
+    }
+    if ('gene_names' %in% return_values) {
+        res$gene_names=gene.names
+    }
     for (n in names(extra)) {
-        if (!(n %in% names(res))) {
+        if (!(n %in% names(res)) & (n %in% return_values)) {
             res[[n]] <- extra[[n]]
         }
     }
@@ -225,7 +244,7 @@ ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
         for (gs.i in seq_along(gene.sets)) {
             gs.index <- match(gene.sets[[gs.i]], gene.names)
             es.null[gs.i, , seq(block.start, block.end)] <-
-                es.fn$run(gene.scores.null, gs.index, prep, ret_extra=F)$es
+                es.fn$run(gene.scores.null, gs.index, prep)$es
         }
 
         block.start <- block.end + 1
@@ -267,7 +286,7 @@ ggsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
         for (gs.i in seq_along(gene.sets)) {
             gs.index <- match(gene.sets[[gs.i]], gene.names)
             es.null.block[gs.i, , ] <-
-                es.fn$run(gene.scores.null, gs.index, prep, ret_extra=F)$es
+                es.fn$run(gene.scores.null, gs.index, prep)$es
         }
         es.null.block
     }
@@ -465,7 +484,8 @@ ggsea_s2n <- function (x, y, abs=F) {
     coef
 }
 
-ggsea_maxmean_ <- function(gene.score, gene.set, prep, ret_extra=F) {
+ggsea_maxmean_ <- function(gene.score, gene.set, prep,
+                           return_values=character(), return_stats=F) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
     n.perm <- dim(gene.score)[3]
@@ -489,7 +509,8 @@ ggsea_maxmean <- list(
     extra_stats = character()
 )
 
-ggsea_mean_ <- function(gene.score, gene.set, prep, ret_extra=F) {
+ggsea_mean_ <- function(gene.score, gene.set, prep,
+                        return_stats=F, return_values=character()) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
     n.perm <- dim(gene.score)[3]
@@ -510,22 +531,36 @@ ggsea_mean <- list(
 )
 
 ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
-                               ret_extra=F) {
+                               return_stats=F, return_values=character()) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
     n.perm <- dim(gene.score)[3]
 
     res <- list()
     res$es <- matrix(0.0, n.response, n.perm)
-    if (ret_extra) {
+
+    ret_extra = F
+    if ('max_es_at' %in% return_stats) {
         res$max_es_at <- matrix(0.0, n.response, n.perm)
+        ret_extra = T
+    }
+    if ('le_prop' %in% return_stats) {
         res$le_prop <- matrix(0.0, n.response, n.perm)
+        ret_extra = T
+    }
+    if ('leading_edge' %in% return_values) {
         res$leading_edge <- list()
+        ret_extra = T
+    }
+    if ('running_es' %in% return_values) {
         res$running_es <- list()
+        ret_extra = T
     }
     for (i in seq(n.response)) {
-        if (ret_extra) {
+        if ('leading_edge' %in% return_values) {
             res$leading_edge[[i]] <- list()
+        }
+        if ('running_es' %in% return_values) {
             res$running_es[[i]] <- list()
         }
         for (j in seq_len(n.perm)) {
@@ -543,21 +578,34 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
             } else {
                 res$es[i, j] = p.min
             }
+
             if (ret_extra) {
-                res$running_es[[i]][[j]] <- p.r
+                if ('running_es' %in% return_values) {
+                    res$running_es[[i]][[j]] <- p.r
+                }
                 if (p.max > abs(p.min)) {
                     w.p.max <- which.max(p.r)
-                    res$max_es_at[i, j] <- w.p.max
-                    res$leading_edge[[i]][[j]] <-
-                        which(gs.i[g.o][1:w.p.max] > 0)
+                    if ('max_es_at' %in% return_values) {
+                        res$max_es_at[i, j] <- w.p.max
+                    }
+                    if ('leading_edge' %in% return_values) {
+                        res$leading_edge[[i]][[j]] <-
+                            which(gs.i[g.o][1:w.p.max] > 0)
+                    }
                 } else {
                     w.p.min <- which.min(p.r)
-                    res$max_es_at[i, j] <- w.p.min
-                    res$leading_edge[[i]][[j]] <-
-                        which(gs.i[g.o][w.p.min:length(gs.i)] > 0)
+                    if ('max_es_at' %in% return_stats) {
+                        res$max_es_at[i, j] <- w.p.min
+                    }
+                    if ('leading_edge' %in% return_values) {
+                        res$leading_edge[[i]][[j]] <-
+                            which(gs.i[g.o][w.p.min:length(gs.i)] > 0)
+                    }
                 }
-                res$le_prop[i, j] <- length(res$leading_edge[[i]][[j]]) /
-                    length(gene.set)
+                if ('le_prop' %in% return_stats) {
+                    res$le_prop[i, j] <- length(res$leading_edge[[i]][[j]]) /
+                        length(gene.set)
+                }
             }
         }
     }
