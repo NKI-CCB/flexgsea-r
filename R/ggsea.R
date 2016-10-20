@@ -9,7 +9,7 @@ named_empty_list <- function(names) {
 }
 
 #' @export
-ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm,
+ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
                   es.fn=ggsea_weighted_ks, sig.fun=ggsea_calc_sig,
                   gene.names=NULL, nperm=1000, gs.size.min=10,
                   gs.size.max=300, verbose=TRUE, block.size=100,
