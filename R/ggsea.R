@@ -8,13 +8,68 @@ named_empty_list <- function(names) {
     structure(vector('list', length(names)), names=names)
 }
 
+#' Flexible Gene Set Enrichment Analysis.
+#'
+#' \code{ggsea} does a gene set enrichment analysis, calculating significance
+#' by sample permutation. Functions to score genes, calculate enrichment
+#' statistic (ES), or calculate significance can be user defined and several
+#' options are supplied in the \pkg{ggsea} package.
+#'
+#' Gene sets are filtered. First, only genes with exist in the data set
+#' \option{x} are kept. Then, gene sets smaller than \option{gs.size.min} or
+#' larger than \option{gs.size.max} are filtered out.
+#'
+#' Runs in parallel by default if \pkg{foreach} environment is setup and
+#' \option{block.size} is smaller than the number of permutations.
+#'
+#' Possible values for \option{return_values}:
+#' \describe{
+#'   \item{\code{es_null}:}{Null distribution of ES.}
+#'   \item{\code{gene_names}:}{Gene names, as supplied to this function.}
+#' }
+#'
+#' @param x Gene expression matrix (genes by samples), or EList object
+#'   produced by, for example, \code{limma::voom()}.
+#' @param y Classes or other variables to analyse for gene set enrichment.
+#'   Vector with length of the number of features, or sample by variable
+#'   matrix.
+#' @param gene.sets Gene sets. Either a filename of gmt file, or gene sets
+#'   read by \code{read_gmt}.
+#' @param gene.score.fn Function to calculate gene scores. The signal to noise
+#'   ratio (\code{ggsea_s2n}) is appropriate for comparing two classes.
+#'   Correlation (\code{ggsea_lm}) can be  used for real valued variables.
+#' @param es.fn Function to calculate ES.
+#' @param sig.fun Function to calculate significance of results. Using
+#'   \code{ggsea_calc_sig_simple} is recommended for \code{es.fn} other than
+#'   \code{ggsea_weighted_ks} as the default might not be appropriate.
+#' @param gene.names Gene identifiers for the genes in \code{x} that match the
+#'   identifiers in \code{gene.sets}. Can also be given as the row names of
+#'   \code{x}.
+#' @param nperm Number of permutations to run.
+#' @param gs.size.min Minimum number genes in a gene set that are also in
+#'   \code{x} for a gene set to be included in the analysis.
+#' @param gs.size.max Maximum number genes in a gene set that are also in
+#'   \code{x} for a gene set to be included in the analysis.
+#' @param verbose Should progress be printed. Progress is never printed when
+#'   running in parallel.
+#' @param block.size Number of permutations for which gene scoring and
+#'   calculation of enrichment statistic is done in one batch. One batch is
+#'   can use only thread, so this setting also effects parallel processing.
+#' @param parallel Should computation be done in parallel.
+#' @param return_values Character vector of values to be returned other than
+#'   table with statistics. Possible values are documented below, and with
+#'   the enrichment function used.
+#' @return A list:
+#'   \item{table}{A list with a data frame of enrichment statistics for each
+#'     variable in \option{y}.}
+#'   \item{...}{Values requested in \code{return_values}}
+#'
 #' @export
 ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
                   es.fn=ggsea_weighted_ks, sig.fun=ggsea_calc_sig,
                   gene.names=NULL, nperm=1000, gs.size.min=10,
                   gs.size.max=300, verbose=TRUE, block.size=100,
-                  parallel=NULL, abs=F, return_values=character(),
-                  return_stats=T) {
+                  parallel=NULL, abs=F, return_values=character()) {
 
     #########################
     # Prepare and check input
@@ -50,13 +105,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
 
     stopifnot(is.character(return_values))
     '' %in% return_values # Try this, so it fails fast, not after permutations.
-    if (return_stats == T) {
-        return_stats <- es.fn$extra_stats
-    } else if (return_stats == F) {
-        return_stats = character(0)
-    }
-    stopifnot(is.character(return_stats))
-    '' %in% return_stats # Try this, so it fails fast, not after permutations.
+    return_stats <- es.fn$extra_stats
     
     if (is.null(parallel)) { 
         if ((nperm / block.size) > 1 && isNamespaceLoaded('foreach')) {
