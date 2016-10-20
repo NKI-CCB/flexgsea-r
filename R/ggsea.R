@@ -595,6 +595,7 @@ filter_gene_sets <- function(gene.sets, gene.names, gs.size.min=10,
     gs.filtered
 }
 
+#' @export
 read_gmt <- function(file, progress=interactive()) {
     lines <- readr::read_lines(file, progress=progress)
     lines <- stringr::str_split(lines, '\t', 3)
