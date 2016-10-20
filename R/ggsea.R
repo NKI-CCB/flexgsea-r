@@ -9,10 +9,11 @@ named_empty_list <- function(names) {
 }
 
 #' @export
-ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm, es.fn=ggsea_maxmean,
-                  sig.fun=ggsea_calc_sig_simple, gene.names=NULL,
-                  nperm=1000, gs.size.min=10, gs.size.max=300,
-                  verbose=TRUE, block.size=1000, parallel=NULL, abs=F) {
+ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_lm,
+                  es.fn=ggsea_weighted_ks, sig.fun=ggsea_calc_sig,
+                  gene.names=NULL, nperm=1000, gs.size.min=10,
+                  gs.size.max=300, verbose=TRUE, block.size=100,
+                  parallel=NULL, abs=F) {
 
     #########################
     # Prepare and check input
