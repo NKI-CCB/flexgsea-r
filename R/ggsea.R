@@ -207,6 +207,9 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
 
     ##################
     # Permutation test
+    if (verbose) {
+        message(paste0("Performing Permutation test"))
+    }
     if (parallel) {
         perm.fun <- ggsea_perm_parallel
     } else {
@@ -215,21 +218,33 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
     es.null <- perm.fun(x, y, gene.sets, gene.names, nperm, block.size,
                         gene.score.fn, es.fn, abs=abs, verbose=verbose)
 
+    ##############
+    # Significance
     if (verbose) {
         message(paste0("Calculating Significance"))
     }
-    sig <- vector('list', n.response)
-    for (response.i in seq(n.response)) {
-        sig[[response.i]] <- sig.fun(es[, response.i],
-                                     es.null[, response.i, ],
-                                     verbose=verbose, abs=abs)
-        for (n in names(extra_stats)) {
-            sig[[response.i]][[n]] <- extra_stats[[n]][, response.i]
+    if (parallel) {
+        `%dopar%` <- foreach::`%dopar%`
+        sig <- foreach::foreach(response.i = seq(n.response)) %dopar% {
+            sig.fun(es[, response.i], es.null[, response.i, ],
+                    verbose=FALSE, abs=abs)
+        }
+    } else {
+        sig <- vector('list', n.response)
+        for (response.i in seq(n.response)) {
+            sig[[response.i]] <- sig.fun(es[, response.i],
+                                         es.null[, response.i, ],
+                                         verbose=verbose, abs=abs)
         }
     }
 
     ################
     # Prepare output
+    for (response.i in seq(n.response)) {
+        for (n in names(extra_stats)) {
+            sig[[response.i]][[n]] <- extra_stats[[n]][, response.i]
+        }
+    }
     res_table <- lapply(sig, dplyr::mutate_, GeneSet=~names(gene.sets))
     names(res_table) <- colnames(y)
     res <- list(table=res_table)
