@@ -595,7 +595,7 @@ ggsea_mean <- list(
 )
 
 ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
-                               return_stats=F, return_values=character()) {
+                               return_stats=c(), return_values=character()) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
     n.perm <- dim(gene.score)[3]
@@ -605,11 +605,11 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
 
     ret_extra = F
     if ('max_es_at' %in% return_stats) {
-        res$max_es_at <- matrix(0.0, n.response, n.perm)
+        res$max_es_at <- matrix(NA, n.response, n.perm)
         ret_extra = T
     }
     if ('le_prop' %in% return_stats) {
-        res$le_prop <- matrix(0.0, n.response, n.perm)
+        res$le_prop <- matrix(NA, n.response, n.perm)
         ret_extra = T
     }
     if ('leading_edge' %in% return_values) {
@@ -620,6 +620,7 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
         res$running_es <- list()
         ret_extra = T
     }
+    do_le = 'leading_edge' %in% return_values || 'le_prop' %in% return_stats
     for (i in seq(n.response)) {
         if ('leading_edge' %in% return_values) {
             res$leading_edge[[i]] <- list()
@@ -649,32 +650,33 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
                 }
                 if (p.max > abs(p.min)) {
                     w.p.max <- which.max(p.r)
-                    if ('max_es_at' %in% return_values) {
+                    if ('max_es_at' %in% return_stats) {
                         res$max_es_at[i, j] <- w.p.max
                     }
-                    if ('leading_edge' %in% return_values) {
-                        res$leading_edge[[i]][[j]] <-
-                            which(gs.i[g.o][1:w.p.max] > 0)
+                    if (do_le) {
+                        le_idx <- which(gs.i[g.o][1:w.p.max] > 0)
                     }
                 } else {
                     w.p.min <- which.min(p.r)
                     if ('max_es_at' %in% return_stats) {
                         res$max_es_at[i, j] <- w.p.min
                     }
-                    if ('leading_edge' %in% return_values) {
-                        res$leading_edge[[i]][[j]] <-
-                            which(gs.i[g.o][w.p.min:length(gs.i)] > 0)
+                    if (do_le) {
+                        le_idx <- which(gs.i[g.o][w.p.min:length(gs.i)] > 0)
                     }
                 }
                 if ('le_prop' %in% return_stats) {
-                    res$le_prop[i, j] <- length(res$leading_edge[[i]][[j]]) /
-                        length(gene.set)
+                    res$le_prop[i, j] <- length(le_idx) / length(gene.set)
+                }
+                if ('leading_edge' %in% return_values) {
+                    res$leading_edge[[i]][[i]] <- le_idx
                 }
             }
         }
     }
     res
 }
+
 #' @export
 ggsea_weighted_ks <- list(
     run = ggsea_weighted_ks_,
