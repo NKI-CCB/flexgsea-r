@@ -107,10 +107,14 @@ x[y == 'a', gs[[1]]] = x[y == 'a', gs[[1]]] + 1
 x[y == 'b', gs[[2]]] = x[y == 'b', gs[[2]]] + 1
 x[y == 'a', gs[[11]]] = x[y == 'a', gs[[11]]] -1
 x[y == 'b', gs[[12]]] = x[y == 'b', gs[[12]]] - 1
+x[y == 'a', gs[[21]]] = x[y == 'a', gs[[21]]] + 10
+x[y == 'b', gs[[22]]] = x[y == 'b', gs[[22]]] + 10
+x[y == 'a', gs[[31]]] = x[y == 'a', gs[[31]]] - 10
+x[y == 'b', gs[[32]]] = x[y == 'b', gs[[32]]] - 10
 
 x_df <- data.frame(x)
 
-test_that("Same results", {
+test_that("Same results of complete GSEA", {
     nperm = 1000
 
     set.seed(7242)
@@ -123,11 +127,12 @@ test_that("Same results", {
         sig.fun=ggsea_calc_sig, nperm=nperm, verbose=F,
         gs.size.min=1, gs.size.max=100, block.size=100, parallel=T)$table[[1]]
     expect_equal(res_gsea[order(res_gsea$GS), 'ES'][[1]],
-                 res[order(res$GeneSet), 'es'][[1]], tolerance=.01)
+                 res[order(res$GeneSet), 'es'][[1]], tolerance=.001)
     expect_equal(res_gsea[order(res_gsea$GS), 'NES'][[1]],
-                 res[order(res$GeneSet), 'nes'][[1]], tolerance=.1)
+                 res[order(res$GeneSet), 'nes'][[1]], tolerance=0.1)
     expect_equal(res_gsea[order(res_gsea$GS), 'NOM p-val'][[1]],
-                 res[order(res$GeneSet), 'p'][[1]], tolerance=.1)
-    expect_equal(res_gsea[order(res_gsea$GS), 'FDR q-val'][[1]],
-                 res[order(res$GeneSet), 'fdr'][[1]], tolerance=0.1)
+                 res[order(res$GeneSet), 'p'][[1]], tolerance=0.1)
+    fdr_gsea <- res_gsea[order(res_gsea$GS), 'FDR q-val'][[1]]
+    fdr_gsea[is.na(fdr_gsea)] <- 0.0
+    expect_equal(fdr_gsea, res[order(res$GeneSet), 'fdr'][[1]], tolerance=0.1)
 })
