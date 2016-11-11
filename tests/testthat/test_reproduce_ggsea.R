@@ -84,32 +84,50 @@ run_gsea <- function(x, y, gs, ...) {
 
 context("replicate GSEA")
 
-d = dplyr::data_frame(
-    x1 = c(-0.91036224, -0.23633198,  0.07675882, -0.14270400),
-    x2 = c(-0.0005694878, -0.9734813268, -2.0230448058,  0.3552175208),
-    x2.big = 10*c(-0.0005694878, -0.9734813268, -2.0230448058,  0.3552175208),
-    x3 = c(0.1979443, -1.0453220, -0.1528467,  0.0897873),
-    x4 = -c(0.1979443, -1.0453220, -0.1528467,  0.0897873),
-    x5 = c(0.1979672, -1.0453921, -0.1528823,  0.0897534),
-    phenotype = c('a', 'b', 'b',  'a'))
+set.seed(487)
 
-gs = list(pw1=c('x1', 'x2', 'x3'), pw2=c('x2', 'x2.big'),
-          pw3=c('x3', 'x5'))
+n_genes = 1000
+n_samples_a = 10
+n_samples_b = 15
+n_samples = n_samples_a + n_samples_b
+n_gene_sets = 100
+
+x <- matrix(rnorm(n_genes*n_samples), n_samples)
+colnames(x) <- paste0('g', seq(n_genes))
+y <- sample(c(rep('a', n_samples_a), rep('b', n_samples_b)))
+names(y) <- paste0('s', seq(n_samples))
+rownames(x) <- names(y)
+gs <- lapply(seq(n_gene_sets), function (gsn) {
+    gs_size <- 10 + sample.int(50, 1)
+    sample(colnames(x), gs_size)
+})
+names(gs) <- paste0('gs', seq(n_gene_sets))
+
+x[y == 'a', gs[[1]]] = x[y == 'a', gs[[1]]] + 1
+x[y == 'b', gs[[2]]] = x[y == 'b', gs[[2]]] + 1
+x[y == 'a', gs[[11]]] = x[y == 'a', gs[[11]]] -1
+x[y == 'b', gs[[12]]] = x[y == 'b', gs[[12]]] - 1
+
+x_df <- data.frame(x)
 
 test_that("Same results", {
-    nperm = 10000
-    x <- dplyr::select(d, dplyr::starts_with('x'))
-    y <- d$phenotype
-    res_gsea <- run_gsea(x, y, gs,
-        gs.size.threshold.min=1, topgs=min(length(gs), 10), nperm=nperm)
-    res <- ggsea(data.matrix(x), y, gs,
+    nperm = 1000
+
+    set.seed(7242)
+    res_gsea <- run_gsea(x_df, y, gs,
+        gs.size.threshold.min=1, gs.size.threshold.max=100,
+        topgs=min(length(gs), 10), nperm=nperm)
+    set.seed(7242)
+    res <- ggsea(x, y, gs,
         gene.score.fn=ggsea_s2n, es.fn=ggsea_weighted_ks,
         sig.fun=ggsea_calc_sig, nperm=nperm, verbose=F,
-        gs.size.min=1, block.size=100, parallel=T)$table[[1]]
+        gs.size.min=1, gs.size.max=100, block.size=100, parallel=T)$table[[1]]
     expect_equal(res_gsea[order(res_gsea$GS), 'ES'][[1]],
-                 res[order(res$GeneSet), 'es'][[1]])
+                 res[order(res$GeneSet), 'es'][[1]], tolerance=.01)
     expect_equal(res_gsea[order(res_gsea$GS), 'NES'][[1]],
-                 res[order(res$GeneSet), 'nes'][[1]], tolerance=(1/nperm)*100)
+                 res[order(res$GeneSet), 'nes'][[1]], tolerance=.1)
     expect_equal(res_gsea[order(res_gsea$GS), 'NOM p-val'][[1]],
-                 res[order(res$GeneSet), 'p'][[1]], tolerance=(1/nperm)*100)
+                 res[order(res$GeneSet), 'p'][[1]], tolerance=.1)
+    expect_equal(res_gsea[order(res_gsea$GS), 'FDR q-val'][[1]],
+                 res[order(res$GeneSet), 'fdr'][[1]], tolerance=0.1)
 })

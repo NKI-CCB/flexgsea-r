@@ -384,10 +384,10 @@ adj_fdr_nes <- function (fdr, nes) {
 }
 
 calc_fdr_nes <- function (nes, nes_null, verbose=F, abs=F) {
-    nes_count_pos <- sum(nes >= 0)
+    nes_count_pos <- sum(nes > 0)
     nes_count_neg <- sum(nes < 0)
-    nes_null_count_pos <- apply(nes_null, 2, function (nes) { sum(nes >= 0) })
-    nes_null_count_neg <- apply(nes_null, 2, function (nes) { sum(nes < 0) })
+    nes_null_count_pos <- sum(nes_null > 0)
+    nes_null_count_neg <- sum(nes_null < 0)
 
     fdr <- numeric(length(nes))
 
@@ -402,29 +402,15 @@ calc_fdr_nes <- function (nes, nes_null, verbose=F, abs=F) {
         }
 
         if ((nes[gs_i] >= 0) | abs) {
-            if (nes_count_pos > 0) {
-                rel_rank <- sum(nes >= nes[gs_i]) / nes_count_pos
-            } else {
-                rel_rank <- 1.0
-            }
-            rel_rank_null <- apply(nes_null >= nes[gs_i], 2, sum) /
-                nes_null_count_pos
-            rel_rank_null[nes_null_count_pos == 0] = 1.0
+            rel_rank <- (sum(nes > nes[gs_i])+1) / nes_count_pos
+            rel_rank_null <- (sum(nes_null > nes[gs_i])+1) /
+                (nes_null_count_pos)
         } else {
-            if (nes_count_neg > 0) {
-                rel_rank <- sum(nes < nes[gs_i]) / nes_count_neg
-            } else {
-                rel_rank <- 1.0
-            }
-            rel_rank_null <- apply(nes_null < nes[gs_i], 2, sum) /
-                nes_null_count_neg
-            rel_rank_null[nes_null_count_neg == 0] = 1.0
+            rel_rank <- (sum(nes < nes[gs_i])+1) / nes_count_neg
+            rel_rank_null <- (sum(nes_null < nes[gs_i])+1) /
+                (nes_null_count_neg)
         }
-        if (rel_rank > 0.0) {
-            fdr[gs_i] <- mean(rel_rank_null) / rel_rank
-        } else {
-            fdr[gs_i] <- 0.0
-        }
+        fdr[gs_i] <- rel_rank_null / rel_rank
     }
     if (verbose) {
         message("Adjusting FDR")
@@ -457,21 +443,21 @@ ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F,
         res$p <- sapply(seq_len(n.gene.sets), function (gs.i) {
             if ((es[gs.i] >= 0.0) | abs) {
                 n <- es_null[gs.i, es_null[gs.i, ] >= 0.0]
-                sum(es[gs.i] <= n) / length(n)
+                (sum(es[gs.i] <= n) + 1) / (length(n) + 1)
             } else {
                 n <- es_null[gs.i, es_null[gs.i, ] <= 0.0]
-                sum(es[gs.i] >= n) / length(n)
+                (sum(es[gs.i] >= n) + 1) / (length(n) + 1)
             }
         })
     } else {
         res$p.high <- sapply(seq_len(n.gene.sets), function (gs.i) {
-            sum(es[gs.i] <= es_null[gs.i, ]) / n.perm
+            (sum(es[gs.i] <= es_null[gs.i, ]) + 1) / (n.perm + 1)
         })
         if (abs) {
             res$p <- res$p.high
         } else {
             res$p.low <- sapply(seq_len(n.gene.sets), function (gs.i) {
-                sum(es[gs.i] >= es_null[gs.i, ]) / n.perm
+                (sum(es[gs.i] >= es_null[gs.i, ]) + 1) / (n.perm + 1)
             })
             res$p <- pmin(pmin(res$p.low, res$p.high) * 2, 1.0)
         }
