@@ -13,7 +13,9 @@ Imports:
     dplyr,
     readr,
     stringr,
-    abind
+    abind,
+    Rcpp
+LinkingTo: Rcpp
 License: MIT + file LICENSE
 LazyData: true
 Suggests:

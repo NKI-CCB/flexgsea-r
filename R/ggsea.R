@@ -1,6 +1,9 @@
 #' @importFrom stats lm sd p.adjust
 #' @importFrom abind abind
 
+#' @useDynLib ggsea
+#' @importFrom Rcpp sourceCpp
+
 named_full_list <- function(value, names) {
     structure(rep(list(value), length(names)), names=names)
 }
@@ -516,18 +519,26 @@ ggsea_s2n <- function (x, y, abs=F) {
     }
     n.response <- ncol(y)
     n.genes <- ncol(x)
-    coef <- apply(y, 2, function (phenotype) {
-        classes <- unique(phenotype)
+    if (is.logical(y)) {
+        classes = c(TRUE, FALSE)
+        per_response_classes = F
+    } else if (is.factor(y)) {
+        classes = levels(y)
+        per_response_classes = F
+    } else {
+        per_response_classes = T
+    }
+    y_bin = apply(y, 2, function (phenotype) {
+        if (per_response_classes) {
+            classes <- sort(unique(phenotype))
+        }
         stopifnot(length(classes) == 2)
-        x1 <- x[phenotype==classes[1], , drop=F]
-        x2 <- x[phenotype==classes[2], , drop=F]
-        m1 <- apply(x1, 2, mean)
-        m2 <- apply(x2, 2, mean)
-        sd1 <- apply(x1, 2, sd)
-        sd2 <- apply(x2, 2, sd)
-        (m1 - m2) / (sd1 + sd2)
+        phenotype == classes[1]
     })
 
+    coef = s2n_C(x, y_bin)
+    rownames(coef) = colnames(x)
+    colnames(coef) = colnames(y)
     if (abs) {
         coef <- abs(coef)
     }
