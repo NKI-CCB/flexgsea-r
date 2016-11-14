@@ -62,6 +62,7 @@ read_gsea_res <- function(res_dir, class) {
 }
 
 run_gsea <- function(x, y, gs, ...) {
+    if (getOption('skip_expensive_tests', F)) skip("Expensive Test")
     check_gsea_r()
     source('../lib/GSEA-P-R/GSEA.1.0.R')
     # Plotting is broken
