@@ -4,6 +4,7 @@ n_genes <- 1000
 n_response <- 3
 n_perm <- 1
 
+set.seed(7242)
 gene_scores <- array(rnorm(n_genes*n_response*n_perm),
                      c(n_genes, n_response, n_perm))
 gene_names <-paste0('g', seq(n_genes))
@@ -35,4 +36,9 @@ test_that("Output has max_es_at", {
     expect_true(is.numeric(res$max_es_at))
     expect_gte(min(res$max_es_at), 1)
     expect_lte(max(res$le_prop), n_genes)
+})
+test_that("Results did not change", {
+    expect_equal_to_reference(res$es, 'test_weighted_ks-es.rds')
+    expect_equal_to_reference(res$le_prop, 'test_weighted_ks-le_prop.rds')
+    expect_equal_to_reference(res$max_es_at, 'test_weighted_ks-max_es_at.rds')
 })

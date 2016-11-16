@@ -109,8 +109,8 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
     stopifnot(is.character(return_values))
     '' %in% return_values # Try this, so it fails fast, not after permutations.
     return_stats <- es.fn$extra_stats
-    
-    if (is.null(parallel)) { 
+
+    if (is.null(parallel)) {
         if ((nperm / block.size) > 1 && isNamespaceLoaded('foreach')) {
             parallel = T
         }  else {
@@ -613,61 +613,108 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
         res$leading_edge <- list()
         ret_extra = T
     }
-    if ('running_es' %in% return_values) {
-        res$running_es <- list()
+    if ('running_es_pos' %in% return_values) {
+        res$running_es_pos <- list()
+        ret_extra = T
+    }
+    if ('running_es_neg' %in% return_values) {
+        res$running_es_neg <- list()
+        ret_extra = T
+    }
+    if ('running_es_at' %in% return_values) {
+        res$running_es_at <- list()
         ret_extra = T
     }
     do_le = 'leading_edge' %in% return_values || 'le_prop' %in% return_stats
+    if (!ret_extra) {
+        for (i in seq(n.response)) {
+            for (j in seq_len(n.perm)) {
+                w <- abs(gene.score[gene.set, i, j])**p
+                w <- w / sum(w)
+                r <- prep$gene.rank[gene.set, i, j]
+                o = order(r)
+                wo = w[o]
+                d_hit <- cumsum(wo)
+                d_miss = ((r[o] - seq_along(r)) /
+                          (total.n.genes - length(gene.set)))
+
+                running_es_pos = d_hit-d_miss
+                running_es_neg = running_es_pos-wo
+
+                es_neg <- min(running_es_neg)
+                es_pos <- max(running_es_pos)
+                do_pos = es_pos > -es_neg
+                if (do_pos) {
+                    res$es[i, j] <- es_pos
+                } else {
+                    res$es[i, j] <- es_neg
+                }
+            }
+        }
+    }
     for (i in seq(n.response)) {
         if ('leading_edge' %in% return_values) {
             res$leading_edge[[i]] <- list()
         }
-        if ('running_es' %in% return_values) {
-            res$running_es[[i]] <- list()
+        if ('running_es_pos' %in% return_values) {
+            res$running_es_pos[[i]] <- list()
+        }
+        if ('running_es_neg' %in% return_values) {
+            res$running_es_neg[[i]] <- list()
+        }
+        if ('running_es_at' %in% return_values) {
+            res$running_es_at[[i]] <- list()
         }
         for (j in seq_len(n.perm)) {
-            g.o <- prep$gene.order[, i, j]
-            gs.i <- rep(0, total.n.genes)
-            gs.i[gene.set] <- 1
-            gs <- abs(gene.score[, i, j])**p
-            p.hit <- (gs.i * gs) / sum(gs[gene.set])
-            p.miss <- (1-gs.i) / (total.n.genes - length(gene.set))
-            p.r <- cumsum((p.hit - p.miss)[g.o])
-            p.min <- min(p.r)
-            p.max <- max(p.r)
-            if (p.max > abs(p.min)) {
-                res$es[i, j] = p.max
+            w <- abs(gene.score[gene.set, i, j])**p
+            w <- w / sum(w)
+            r <- prep$gene.rank[gene.set, i, j]
+            o = order(r)
+            wo = w[o]
+            d_hit <- cumsum(wo)
+            d_miss = ((r[o] - seq_along(r)) /
+                      (total.n.genes - length(gene.set)))
+
+            running_es_pos = d_hit-d_miss
+            running_es_neg = running_es_pos-wo
+
+            es_neg <- min(running_es_neg)
+            es_pos <- max(running_es_pos)
+            do_pos = es_pos > -es_neg
+            if (do_pos) {
+                res$es[i, j] <- es_pos
             } else {
-                res$es[i, j] = p.min
+                res$es[i, j] <- es_neg
             }
 
-            if (ret_extra) {
-                if ('running_es' %in% return_values) {
-                    res$running_es[[i]][[j]] <- p.r
+            if ('running_es_pos' %in% return_values) {
+                res$running_es_pos[[i]][[j]] <- running_es_pos
+            }
+            if ('running_es_neg' %in% return_values) {
+                res$running_es_neg[[i]][[j]] <- running_es_neg
+            }
+            if ('running_es_at' %in% return_values) {
+                res$running_es_at = gene.set[o]
+            }
+            if (do_pos) {
+                wmes <- which.max(running_es_pos)
+                if (do_le) {
+                    le_idx <- gene.set[o][1:wmes]
                 }
-                if (p.max > abs(p.min)) {
-                    w.p.max <- which.max(p.r)
-                    if ('max_es_at' %in% return_stats) {
-                        res$max_es_at[i, j] <- w.p.max
-                    }
-                    if (do_le) {
-                        le_idx <- which(gs.i[g.o][1:w.p.max] > 0)
-                    }
-                } else {
-                    w.p.min <- which.min(p.r)
-                    if ('max_es_at' %in% return_stats) {
-                        res$max_es_at[i, j] <- w.p.min
-                    }
-                    if (do_le) {
-                        le_idx <- which(gs.i[g.o][w.p.min:length(gs.i)] > 0)
-                    }
+            } else {
+                wmes <- which.min(running_es_neg)
+                if (do_le) {
+                    le_idx <- gene.set[o][wmes:length(gene.set)]
                 }
-                if ('le_prop' %in% return_stats) {
-                    res$le_prop[i, j] <- length(le_idx) / length(gene.set)
-                }
-                if ('leading_edge' %in% return_values) {
-                    res$leading_edge[[i]][[i]] <- le_idx
-                }
+            }
+            if ('max_es_at' %in% return_stats) {
+                res$max_es_at[i, j] <- r[o][wmes]
+            }
+            if ('le_prop' %in% return_stats) {
+                res$le_prop[i, j] <- length(le_idx) / length(gene.set)
+            }
+            if ('leading_edge' %in% return_values) {
+                res$leading_edge[[i]][[i]] <- le_idx
             }
         }
     }
@@ -678,11 +725,15 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
 ggsea_weighted_ks <- list(
     run = ggsea_weighted_ks_,
     prepare = function(gene.score) {
-        gene.order <- apply(gene.score, c(2, 3), order, decreasing=T)
-        list(gene.order = gene.order)
+        total.n.genes <- dim(gene.score)[1]
+        gene.rank <- apply(gene.score, c(2, 3), function (s) {
+            total.n.genes - rank(s, 'keep', 'first') + 1
+        })
+        list(gene.rank = gene.rank)
     },
     extra_stats = c('max_es_at', 'le_prop'),
-    extra = c('running_es', 'leading_edge')
+    extra = c('running_es_pos', 'running_es_neg', 'running_es_at',
+              'leading_edge')
 )
 
 filter_gene_sets <- function(gene.sets, gene.names, gs.size.min=10,
