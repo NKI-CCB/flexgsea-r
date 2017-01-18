@@ -25,22 +25,45 @@ named_empty_list <- function(names) {
 #' Runs in parallel by default if \pkg{foreach} environment is setup and
 #' \option{block.size} is smaller than the number of permutations.
 #'
-#' Possible values for \option{return_values}:
+#' @section Possible values for \option{return_values}:
 #' \describe{
 #'   \item{\code{es_null}:}{Null distribution of ES.}
 #'   \item{\code{gene_names}:}{Gene names, as supplied to this function.}
 #' }
+#' Additional return values might be available when using specific gene set
+#' enrichment functions.
+#'
+#' @section User-defined gene scoring function \code{gene.score.fn}:
+#' TODO
+#'
+#' @section User-defined gene set enrichment function \code{es.fn}:
+#' TODO
+#'
+#' @section User-defined significance calculation \code{sig.fun}:
+#' A significance calculation function should take the following arguments:
+#' \describe{
+#'   \item{\code{es}:}{Enrichment scores for a single output variable, a
+#'     numeric vector with a length equal to the number of gene sets.}
+#'   \item{\code{es_null}:}{Enrichment scores from permuted labels, a numeric
+#'     array with dimensions number of gene sets by number of permutations.}
+#'   \item{\code{verbose}:}{Passed from main \code{ggsea} function.}
+#'   \item{\code{abs}:}{Passed from main \code{ggsea} function.}
+#' }
+#' It should return a data frame with a row for every gene set, and a column
+#' for every statistic. This data frame is returned by the main \code{ggsea}
+#' function in the \code{table} list after appending gene set names.
 #'
 #' @param x Gene expression matrix (genes by samples), or EList object
-#'   produced by, for example, \code{limma::voom()}.
+#'   produced by, for example, \code{limma::\link[limma]{voom}}.
 #' @param y Classes or other variables to analyse for gene set enrichment.
 #'   Vector with length of the number of features, or sample by variable
 #'   matrix.
 #' @param gene.sets Gene sets. Either a filename of gmt file, or gene sets
-#'   read by \code{read_gmt}.
+#'   read by \code{\link{read_gmt}}.
 #' @param gene.score.fn Function to calculate gene scores. The signal to noise
-#'   ratio (\code{ggsea_s2n}) is appropriate for comparing two classes.
-#'   Correlation (\code{ggsea_lm}) can be  used for real valued variables.
+#'   ratio (\code{\link{ggsea_s2n}}) is appropriate for comparing two classes.
+#'   Correlation (\code{\link{ggsea_lm}}) can be  used for real valued
+#'   variables.
 #' @param es.fn Function to calculate ES.
 #' @param sig.fun Function to calculate significance of results. Using
 #'   \code{ggsea_calc_sig_simple} is recommended for \code{es.fn} other than
@@ -56,9 +79,11 @@ named_empty_list <- function(names) {
 #' @param verbose Should progress be printed. Progress is never printed when
 #'   running in parallel.
 #' @param block.size Number of permutations for which gene scoring and
-#'   calculation of enrichment statistic is done in one batch. One batch is
-#'   can use only thread, so this setting also effects parallel processing.
+#'   calculation of enrichment statistic is done in one batch. One batch can
+#'   use only one thread, so this setting also effects parallel processing.
 #' @param parallel Should computation be done in parallel.
+#' @param abs Should the absolute enrichment score be used. This appropriate
+#'   when gene sets have no direction, such as the MsigDB c2.cp collection.
 #' @param return_values Character vector of values to be returned other than
 #'   table with statistics. Possible values are documented below, and with
 #'   the enrichment function used.
