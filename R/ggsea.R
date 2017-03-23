@@ -13,12 +13,12 @@ named_empty_list <- function(names) {
 
 #' Flexible Gene Set Enrichment Analysis.
 #'
-#' \code{ggsea} does a gene set enrichment analysis, calculating significance
+#' \code{ggsea()} does a gene set enrichment analysis, calculating significance
 #' by sample permutation. Functions to score genes, calculate enrichment
 #' statistic (ES), or calculate significance can be user defined and several
 #' options are supplied in the \pkg{ggsea} package.
 #'
-#' Gene sets are filtered. First, only genes with exist in the data set
+#' Gene sets are filtered. First, only genes which exist in the data set
 #' \option{x} are kept. Then, gene sets smaller than \option{gs.size.min} or
 #' larger than \option{gs.size.max} are filtered out.
 #'
@@ -34,10 +34,53 @@ named_empty_list <- function(names) {
 #' enrichment functions.
 #'
 #' @section User-defined gene scoring function \code{gene.score.fn}:
-#' TODO
+#' A gene score calculation function should take the following arguments:
+#' \describe{
+#'   \item{\code{x}:}{The data matrix \code{x}, exactly as given to the
+#'      \code{gsea} function.}
+#'   \item{\code{y}:}{Response variables to test for gene set enrichment.
+#'      A permutation of the \code{y} given to the \code{gsea} function.
+#'      This is a matrix with samples in the rows, and output variables in
+#'      the columns.}
+#' }
+#' It should return a matrix with samples in the columns and genes in the rows.
+#' \describe{
+#'   \item{\code{x}:}{The data matrix \code{x}, exactly as given to the
+#'      \code{gsea} function.}
+#'   \item{\code{y}:}{Response variables to test for gene set enrichment.
+#'      A permutation of the \code{y} given to the \code{gsea} function.
+#'      This is a matrix with samples in the rows, and output variables in
+#'      the columns.}
+#' } A simple example is \code{\link{ggsea_lm}}.
 #'
 #' @section User-defined gene set enrichment function \code{es.fn}:
-#' TODO
+#' A list of two functions (\code{prepare} and \code{run}) and two character
+#' vectors (\code{extra_stats} and \code{extra}). The code{prepare} function
+#' can be used to do calculations that are the same for all gene sets. It takes
+#' a single argument \code{gene.score}  and can return anything, which is
+#' passed to the \code{run} function. This function can be called one or
+#' multiple times on any subset of permutations, so this function  should not
+#' modify global state.
+#' The \code{run} function should take the following arguments:
+#' \describe{
+#'   \item{gene.score}{Gene scores of one or more permutations in an array
+#'      (genes x response variable x permutation).}
+#'   \item{gene.set}{Gene set as an integer vector which indexes the first
+#'      dimension of the \code{gene.score} array.}
+#'   \item{prep}{Whatever the \code{prepare} function returned for this
+#'      \code{gene.score}.}
+#'   \item{return_stats}{A character vector of statistics to return. This
+#'      function can advertise which stats are available trough
+#'      \code{extra_stats} in the list. Should default to \code{c()}.}
+#'   \item{return}{A character vector of other extra values to return. This
+#'      function can advertise which values are available trough
+#'      \code{extra} in the list. Should default to \code{c()}.}
+#' }
+#' It should return a list with \code{es} and any requested extra statistics
+#' and other values. The extra statistics are put into the results table, while
+#' the other extra values are added to the list returned by \code{ggsea}. The
+#' \code{es} element should be a matrix (response x permutation).
+#' A simple example is \code{\link{ggsea_mean}}.
 #'
 #' @section User-defined significance calculation \code{sig.fun}:
 #' A significance calculation function should take the following arguments:
@@ -53,24 +96,34 @@ named_empty_list <- function(names) {
 #' for every statistic. This data frame is returned by the main \code{ggsea}
 #' function in the \code{table} list after appending gene set names.
 #'
+#' @seealso Gene scoring functions: \code{\link{ggsea_s2n}},
+#'   \code{\link{ggsea_lm}}.
+#' @seealso Gene set enrichment functions: \code{\link{ggsea_mean}},
+#'   \code{\link{ggsea_weighted_ks}}, \code{\link{ggsea_maxmean}}.
+#' @seealso Functions for significance calculation:
+#'   \code{\link{ggsea_calc_sig}},\code{\link{ggsea_calc_sig_simple}}.
+#'
 #' @param x Gene expression matrix (genes by samples), or EList object
 #'   produced by, for example, \code{limma::\link[limma]{voom}}.
-#' @param y Classes or other variables to analyse for gene set enrichment.
+#' @param y Classes or other response variables to analyse for gene set enrichment.
 #'   Vector with length of the number of features, or sample by variable
 #'   matrix.
-#' @param gene.sets Gene sets. Either a filename of gmt file, or gene sets
-#'   read by \code{\link{read_gmt}}.
+#' @param gene.sets Gene sets. Either a filename of a gmt file, or gene sets
+#'   read by the \code{\link{read_gmt}} function.
 #' @param gene.score.fn Function to calculate gene scores. The signal to noise
 #'   ratio (\code{\link{ggsea_s2n}}) is appropriate for comparing two classes.
 #'   Correlation (\code{\link{ggsea_lm}}) can be  used for real valued
-#'   variables.
-#' @param es.fn Function to calculate ES.
+#'   variables. Can be user-defined, as documented below.
+#' @param es.fn Function to calculate enrichment scores (ES). Default is the
+#'   weighted KS statistic by Subramanian et al (2005). Can be user-defined, as
+#'   documented below.
 #' @param sig.fun Function to calculate significance of results. Using
-#'   \code{ggsea_calc_sig_simple} is recommended for \code{es.fn} other than
-#'   \code{ggsea_weighted_ks} as the default might not be appropriate.
-#' @param gene.names Gene identifiers for the genes in \code{x} that match the
-#'   identifiers in \code{gene.sets}. Can also be given as the row names of
-#'   \code{x}.
+#'   \code{ggsea_calc_sig_simple} is recommended for a \code{es.fn} function
+#'   other than the default \code{ggsea_weighted_ks} as the default might not
+#'   be appropriate. Can be user-defined, as documented below.
+#' @param gene.names Gene identifiers for the genes in the data \code{x} that
+#'   match the identifiers in \code{gene.sets}. Defaults to the the
+#'   row names of \code{x}.
 #' @param nperm Number of permutations to run.
 #' @param gs.size.min Minimum number genes in a gene set that are also in
 #'   \code{x} for a gene set to be included in the analysis.
@@ -81,23 +134,24 @@ named_empty_list <- function(names) {
 #' @param block.size Number of permutations for which gene scoring and
 #'   calculation of enrichment statistic is done in one batch. One batch can
 #'   use only one thread, so this setting also effects parallel processing.
+#'   Lower values use less memory, but might lose performance.
 #' @param parallel Should computation be done in parallel.
 #' @param abs Should the absolute enrichment score be used. This appropriate
-#'   when gene sets have no direction, such as the MsigDB c2.cp collection.
+#'   when gene sets have no direction, such as the MsigDB c2.cp gene set
+#'   collection.
 #' @param return_values Character vector of values to be returned other than
 #'   table with statistics. Possible values are documented below, and with
 #'   the enrichment function used.
-#' @return A list:
-#'   \item{table}{A list with a data frame of enrichment statistics for each
-#'     variable in \option{y}.}
-#'   \item{...}{Values requested in \code{return_values}}
+#' @return A list. The \code{table} element is a list with a data frame of
+#'   enrichment statistics for each response variable in \option{y}. Other
+#'   elements are the values requested in \option{return_values}.
 #'
 #' @export
 ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
                   es.fn=ggsea_weighted_ks, sig.fun=ggsea_calc_sig,
                   gene.names=NULL, nperm=1000, gs.size.min=10,
                   gs.size.max=300, verbose=TRUE, block.size=100,
-                  parallel=NULL, abs=F, return_values=character()) {
+                  parallel=NULL, abs=FALSE, return_values=character()) {
 
     #########################
     # Prepare and check input
@@ -447,12 +501,33 @@ calc_fdr_nes <- function (nes, nes_null, verbose=F, abs=F) {
 }
 
 
+#' Calculate significance of gene set enrichments from permutations.
+#'
+#' Calculates significance by the rank of ES score in the permuted values.
+#' Significance is calculated separately per gene set.
+#'
+#' @usage ggsea(x, y, gene.sets, sig.fun=ggsea_calc_sig_simple)
+#' @family functions for significance calculation
 #' @export
 ggsea_calc_sig_simple <- function (es, es.null, verbose=F, abs=F) {
     ggsea_calc_sig(es, es.null, split.p=F, calc.nes=F, verbose=verbose,
                    abs=abs)
 }
 
+#' Calculate significance of gene set enrichments from permutations.
+#'
+#' Calculates significance like Subramanian et al.. Significance is calculated
+#' separately for positive and ES scores. A normalized enrichment score (NES)
+#' is calculated. The NES for all gene sets are combined to get more precision
+#' with less permutations.
+#'
+#' @references Subramanian, A. et al. (2005) Gene Set Enrichment Analysis: A
+#'   Knowledge-Based Approach for Interpreting Genome-Wide Expression
+#'   Profiles. \emph{PNAS} \strong{102} (43): 15545–50.
+#'   doi:10.1073/pnas.0506580102.
+#' @usage ggsea(x, y, gene.sets, sig.fun=ggsea_calc_sig)
+#' @family functions for significance calculation
+#' @export
 #' @export
 ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F,
                             abs=F) {
@@ -520,6 +595,17 @@ ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F,
     res
 }
 
+#' Score genes in a linear regression model.
+#'
+#' Scores genes by their coefficients in a linear regression
+#' model of \option{y} onto \option{x}. When there is one response variable
+#' this is equivalent to Pearson correlation.
+#' Do not call directly, but give as the \option{gene.score.fn}  argument to
+#' \code{\link{ggsea}}.
+#'
+#' @family gene scoring functions
+#' @usage ggsea(x, y, gene.sets, gene.score.fn=ggsea_lm)
+#'
 #' @export
 ggsea_lm <- function (x, y, abs=F) {
     if (!is.matrix(y)) {
@@ -537,6 +623,16 @@ ggsea_lm <- function (x, y, abs=F) {
     coef
 }
 
+#' Score genes by there signal to noise ratio.
+#'
+#' Scores genes by the signal to noise ration (s2n) a. Requires \option{y}
+#' to have two classes.
+#' Do not call directly, but give as the \option{gene.score.fn}  argument to
+#' \code{\link{ggsea}}.
+#'
+#' @family gene scoring functions
+#' @usage ggsea(x, y, gene.sets, gene.score.fn=ggsea_s2n)
+#'
 #' @export
 ggsea_s2n <- function (x, y, abs=F) {
     if (!is.matrix(y)) {
@@ -588,6 +684,11 @@ ggsea_maxmean_ <- function(gene.score, gene.set, prep,
     res
 }
 
+#' The maxmean statistic for calculating gene set enrichement scores.
+#'
+#' @usage ggsea(x, y, gene.sets, es.fn=ggsea_maxmean)
+#' @family gene set enrichment functions
+#'
 #' @export
 ggsea_maxmean <- list(
     run = ggsea_maxmean_,
@@ -609,6 +710,11 @@ ggsea_mean_ <- function(gene.score, gene.set, prep,
     res
 }
 
+#' The mean statistic for calculating gene set enrichement scores.
+#'
+#' @usage ggsea(x, y, gene.sets, es.fn=ggsea_mean)
+#' @family gene set enrichment functions
+#'
 #' @export
 ggsea_mean <- list(
     run = ggsea_mean_,
@@ -746,6 +852,18 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
     res
 }
 
+#' The weighted KS statistic for calculating gene set enrichement scores.
+#'
+#' The weighted KS-like statistic as described by Subramanian et al (2005).
+#'
+#' @references Subramanian, A. et al. (2005) Gene Set Enrichment Analysis: A
+#'   Knowledge-Based Approach for Interpreting Genome-Wide Expression
+#'   Profiles. \emph{PNAS} \strong{102} (43): 15545–50.
+#'   doi:10.1073/pnas.0506580102.
+#' @usage ggsea(x, y, gene.sets, es.fn=ggsea_weighted_ks)
+#' @family gene set enrichment functions
+#'
+#'
 #' @export
 ggsea_weighted_ks <- list(
     run = ggsea_weighted_ks_,
@@ -782,6 +900,11 @@ filter_gene_sets <- function(gene.sets, gene.names, gs.size.min=10,
     gs.filtered
 }
 
+#' Read gene sets in gmt format.
+#'
+#' @param file Either a path to a file, a connection, or literal data. Passed to
+#'    the \pkg{readr} package so also supports some compression and urls.
+#' @param progress Display a progress bar? Passed to the \pkg{readr} package.
 #' @export
 read_gmt <- function(file, progress=interactive()) {
     lines <- readr::read_lines(file, progress=progress)

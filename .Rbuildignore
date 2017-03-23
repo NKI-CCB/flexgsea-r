@@ -4,3 +4,4 @@
 ^tests/lib/.*$
 ^\.travis\.yml$
 ^bitbucket-pipelines\.yml$
+^docs$

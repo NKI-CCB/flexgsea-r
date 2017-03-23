@@ -7,33 +7,36 @@
 ggsea(x, y, gene.sets, gene.score.fn = ggsea_s2n, es.fn = ggsea_weighted_ks,
   sig.fun = ggsea_calc_sig, gene.names = NULL, nperm = 1000,
   gs.size.min = 10, gs.size.max = 300, verbose = TRUE, block.size = 100,
-  parallel = NULL, abs = F, return_values = character())
+  parallel = NULL, abs = FALSE, return_values = character())
 }
 \arguments{
 \item{x}{Gene expression matrix (genes by samples), or EList object
 produced by, for example, \code{limma::\link[limma]{voom}}.}
 
-\item{y}{Classes or other variables to analyse for gene set enrichment.
+\item{y}{Classes or other response variables to analyse for gene set enrichment.
 Vector with length of the number of features, or sample by variable
 matrix.}
 
-\item{gene.sets}{Gene sets. Either a filename of gmt file, or gene sets
-read by \code{\link{read_gmt}}.}
+\item{gene.sets}{Gene sets. Either a filename of a gmt file, or gene sets
+read by the \code{\link{read_gmt}} function.}
 
 \item{gene.score.fn}{Function to calculate gene scores. The signal to noise
 ratio (\code{\link{ggsea_s2n}}) is appropriate for comparing two classes.
 Correlation (\code{\link{ggsea_lm}}) can be  used for real valued
-variables.}
+variables. Can be user-defined, as documented below.}
 
-\item{es.fn}{Function to calculate ES.}
+\item{es.fn}{Function to calculate enrichment scores (ES). Default is the
+weighted KS statistic by Subramanian et al (2005). Can be user-defined, as
+documented below.}
 
 \item{sig.fun}{Function to calculate significance of results. Using
-\code{ggsea_calc_sig_simple} is recommended for \code{es.fn} other than
-\code{ggsea_weighted_ks} as the default might not be appropriate.}
+\code{ggsea_calc_sig_simple} is recommended for a \code{es.fn} function
+other than the default \code{ggsea_weighted_ks} as the default might not
+be appropriate. Can be user-defined, as documented below.}
 
-\item{gene.names}{Gene identifiers for the genes in \code{x} that match the
-identifiers in \code{gene.sets}. Can also be given as the row names of
-\code{x}.}
+\item{gene.names}{Gene identifiers for the genes in the data \code{x} that
+match the identifiers in \code{gene.sets}. Defaults to the the
+row names of \code{x}.}
 
 \item{nperm}{Number of permutations to run.}
 
@@ -48,31 +51,32 @@ running in parallel.}
 
 \item{block.size}{Number of permutations for which gene scoring and
 calculation of enrichment statistic is done in one batch. One batch can
-use only one thread, so this setting also effects parallel processing.}
+use only one thread, so this setting also effects parallel processing.
+Lower values use less memory, but might lose performance.}
 
 \item{parallel}{Should computation be done in parallel.}
 
 \item{abs}{Should the absolute enrichment score be used. This appropriate
-when gene sets have no direction, such as the MsigDB c2.cp collection.}
+when gene sets have no direction, such as the MsigDB c2.cp gene set
+collection.}
 
 \item{return_values}{Character vector of values to be returned other than
 table with statistics. Possible values are documented below, and with
 the enrichment function used.}
 }
 \value{
-A list:
-  \item{table}{A list with a data frame of enrichment statistics for each
-    variable in \option{y}.}
-  \item{...}{Values requested in \code{return_values}}
+A list. The \code{table} element is a list with a data frame of
+  enrichment statistics for each response variable in \option{y}. Other
+  elements are the values requested in \option{return_values}.
 }
 \description{
-\code{ggsea} does a gene set enrichment analysis, calculating significance
+\code{ggsea()} does a gene set enrichment analysis, calculating significance
 by sample permutation. Functions to score genes, calculate enrichment
 statistic (ES), or calculate significance can be user defined and several
 options are supplied in the \pkg{ggsea} package.
 }
 \details{
-Gene sets are filtered. First, only genes with exist in the data set
+Gene sets are filtered. First, only genes which exist in the data set
 \option{x} are kept. Then, gene sets smaller than \option{gs.size.min} or
 larger than \option{gs.size.max} are filtered out.
 
@@ -91,12 +95,55 @@ enrichment functions.
 
 \section{User-defined gene scoring function \code{gene.score.fn}}{
 
-TODO
+A gene score calculation function should take the following arguments:
+\describe{
+  \item{\code{x}:}{The data matrix \code{x}, exactly as given to the
+     \code{gsea} function.}
+  \item{\code{y}:}{Response variables to test for gene set enrichment.
+     A permutation of the \code{y} given to the \code{gsea} function.
+     This is a matrix with samples in the rows, and output variables in
+     the columns.}
+}
+It should return a matrix with samples in the columns and genes in the rows.
+\describe{
+  \item{\code{x}:}{The data matrix \code{x}, exactly as given to the
+     \code{gsea} function.}
+  \item{\code{y}:}{Response variables to test for gene set enrichment.
+     A permutation of the \code{y} given to the \code{gsea} function.
+     This is a matrix with samples in the rows, and output variables in
+     the columns.}
+} A simple example is \code{\link{ggsea_lm}}.
 }
 
 \section{User-defined gene set enrichment function \code{es.fn}}{
 
-TODO
+A list of two functions (\code{prepare} and \code{run}) and two character
+vectors (\code{extra_stats} and \code{extra}). The code{prepare} function
+can be used to do calculations that are the same for all gene sets. It takes
+a single argument \code{gene.score}  and can return anything, which is
+passed to the \code{run} function. This function can be called one or
+multiple times on any subset of permutations, so this function  should not
+modify global state.
+The \code{run} function should take the following arguments:
+\describe{
+  \item{gene.score}{Gene scores of one or more permutations in an array
+     (genes x response variable x permutation).}
+  \item{gene.set}{Gene set as an integer vector which indexes the first
+     dimension of the \code{gene.score} array.}
+  \item{prep}{Whatever the \code{prepare} function returned for this
+     \code{gene.score}.}
+  \item{return_stats}{A character vector of statistics to return. This
+     function can advertise which stats are available trough
+     \code{extra_stats} in the list. Should default to \code{c()}.}
+  \item{return}{A character vector of other extra values to return. This
+     function can advertise which values are available trough
+     \code{extra} in the list. Should default to \code{c()}.}
+}
+It should return a list with \code{es} and any requested extra statistics
+and other values. The extra statistics are put into the results table, while
+the other extra values are added to the list returned by \code{ggsea}. The
+\code{es} element should be a matrix (response x permutation).
+A simple example is \code{\link{ggsea_mean}}.
 }
 
 \section{User-defined significance calculation \code{sig.fun}}{
@@ -115,3 +162,13 @@ for every statistic. This data frame is returned by the main \code{ggsea}
 function in the \code{table} list after appending gene set names.
 }
 
+\seealso{
+Gene scoring functions: \code{\link{ggsea_s2n}},
+  \code{\link{ggsea_lm}}.
+
+Gene set enrichment functions: \code{\link{ggsea_mean}},
+  \code{\link{ggsea_weighted_ks}}, \code{\link{ggsea_maxmean}}.
+
+Functions for significance calculation:
+  \code{\link{ggsea_calc_sig}},\code{\link{ggsea_calc_sig_simple}}.
+}
