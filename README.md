@@ -1,6 +1,8 @@
 Flexible Gene Set Enrichment Analysis
 =====================================
 
+[![DOI](https://zenodo.org/badge/86062898.svg)](https://zenodo.org/badge/latestdoi/86062898)
+
 ggsea is a R package to do gene set enrichment analysis [1]. Main advantages:
 
  - Allows user defined functions.
