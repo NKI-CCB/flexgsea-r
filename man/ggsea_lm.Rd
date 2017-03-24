@@ -4,7 +4,7 @@
 \alias{ggsea_lm}
 \title{Score genes in a linear regression model.}
 \usage{
-ggsea(x, y, gene.sets, gene.score.fn=ggsea_lm)
+ggsea_lm
 }
 \description{
 Scores genes by their coefficients in a linear regression

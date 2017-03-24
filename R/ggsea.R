@@ -506,7 +506,7 @@ calc_fdr_nes <- function (nes, nes_null, verbose=F, abs=F) {
 #' Calculates significance by the rank of ES score in the permuted values.
 #' Significance is calculated separately per gene set.
 #'
-#' @usage ggsea(x, y, gene.sets, sig.fun=ggsea_calc_sig_simple)
+#' @usage ggsea_calc_sig_simple
 #' @family functions for significance calculation
 #' @export
 ggsea_calc_sig_simple <- function (es, es.null, verbose=F, abs=F) {
@@ -523,9 +523,9 @@ ggsea_calc_sig_simple <- function (es, es.null, verbose=F, abs=F) {
 #'
 #' @references Subramanian, A. et al. (2005) Gene Set Enrichment Analysis: A
 #'   Knowledge-Based Approach for Interpreting Genome-Wide Expression
-#'   Profiles. \emph{PNAS} \strong{102} (43): 15545–50.
+#'   Profiles. \emph{PNAS} \strong{102} (43): 15545-50.
 #'   doi:10.1073/pnas.0506580102.
-#' @usage ggsea(x, y, gene.sets, sig.fun=ggsea_calc_sig)
+#' @usage ggsea_calc_sig
 #' @family functions for significance calculation
 #' @export
 #' @export
@@ -604,7 +604,7 @@ ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F,
 #' \code{\link{ggsea}}.
 #'
 #' @family gene scoring functions
-#' @usage ggsea(x, y, gene.sets, gene.score.fn=ggsea_lm)
+#' @usage ggsea_lm
 #'
 #' @export
 ggsea_lm <- function (x, y, abs=F) {
@@ -631,7 +631,7 @@ ggsea_lm <- function (x, y, abs=F) {
 #' \code{\link{ggsea}}.
 #'
 #' @family gene scoring functions
-#' @usage ggsea(x, y, gene.sets, gene.score.fn=ggsea_s2n)
+#' @usage ggsea_s2n
 #'
 #' @export
 ggsea_s2n <- function (x, y, abs=F) {
@@ -686,7 +686,7 @@ ggsea_maxmean_ <- function(gene.score, gene.set, prep,
 
 #' The maxmean statistic for calculating gene set enrichement scores.
 #'
-#' @usage ggsea(x, y, gene.sets, es.fn=ggsea_maxmean)
+#' @usage ggsea_maxmean
 #' @family gene set enrichment functions
 #'
 #' @export
@@ -712,7 +712,7 @@ ggsea_mean_ <- function(gene.score, gene.set, prep,
 
 #' The mean statistic for calculating gene set enrichement scores.
 #'
-#' @usage ggsea(x, y, gene.sets, es.fn=ggsea_mean)
+#' @usage ggsea_mean
 #' @family gene set enrichment functions
 #'
 #' @export
@@ -858,9 +858,9 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
 #'
 #' @references Subramanian, A. et al. (2005) Gene Set Enrichment Analysis: A
 #'   Knowledge-Based Approach for Interpreting Genome-Wide Expression
-#'   Profiles. \emph{PNAS} \strong{102} (43): 15545–50.
+#'   Profiles. \emph{PNAS} \strong{102} (43): 15545-50.
 #'   doi:10.1073/pnas.0506580102.
-#' @usage ggsea(x, y, gene.sets, es.fn=ggsea_weighted_ks)
+#' @usage ggsea_weighted_ks
 #' @family gene set enrichment functions
 #'
 #'

@@ -1,11 +1,14 @@
 Package: ggsea
-Title: Gene Set Enrichment Analysis
-Version: 0.9
+Title: Flexible Gene Set Enrichment Analysis
+Version: 1.0
 Authors@R: c(
 	person("Tycho", "Bismeijer", email = "t.bismeijer@nki.nl", role = c("aut", "cre")),
+	person("Yongsoo", "Kim", email = "yo.kim@nki.nl", role = c("ctb")),
 	person(family="Netherlands Cancer Institute", role = c("cph")))
 Description: Get set enrichment analysis, with different measures, also linear
     models.
+Contact: t.bismeijer@nki.nl
+BugReports: https://github.com/NKI-CCB/ggsea/issues
 Depends:
     R (>= 3.2.2),
 Imports:
@@ -16,7 +19,7 @@ Imports:
     abind,
     Rcpp
 LinkingTo: Rcpp
-License: MIT + file LICENSE
+License: Apache License 2.0
 LazyData: true
 Suggests:
     testthat,

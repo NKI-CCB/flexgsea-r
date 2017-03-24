@@ -6,7 +6,7 @@
 \title{The maxmean statistic for calculating gene set enrichement scores.}
 \format{An object of class \code{list} of length 3.}
 \usage{
-ggsea(x, y, gene.sets, es.fn=ggsea_maxmean)
+ggsea_maxmean
 }
 \description{
 The maxmean statistic for calculating gene set enrichement scores.

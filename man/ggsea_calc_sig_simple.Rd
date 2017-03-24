@@ -4,7 +4,7 @@
 \alias{ggsea_calc_sig_simple}
 \title{Calculate significance of gene set enrichments from permutations.}
 \usage{
-ggsea(x, y, gene.sets, sig.fun=ggsea_calc_sig_simple)
+ggsea_calc_sig_simple
 }
 \description{
 Calculates significance by the rank of ES score in the permuted values.

@@ -6,7 +6,7 @@
 \title{The mean statistic for calculating gene set enrichement scores.}
 \format{An object of class \code{list} of length 3.}
 \usage{
-ggsea(x, y, gene.sets, es.fn=ggsea_mean)
+ggsea_mean
 }
 \description{
 The mean statistic for calculating gene set enrichement scores.

@@ -4,7 +4,7 @@
 \alias{ggsea_s2n}
 \title{Score genes by there signal to noise ratio.}
 \usage{
-ggsea(x, y, gene.sets, gene.score.fn=ggsea_s2n)
+ggsea_s2n
 }
 \description{
 Scores genes by the signal to noise ration (s2n) a. Requires \option{y}

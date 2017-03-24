@@ -6,7 +6,7 @@
 \title{The weighted KS statistic for calculating gene set enrichement scores.}
 \format{An object of class \code{list} of length 4.}
 \usage{
-ggsea(x, y, gene.sets, es.fn=ggsea_weighted_ks)
+ggsea_weighted_ks
 }
 \description{
 The weighted KS-like statistic as described by Subramanian et al (2005).
@@ -14,7 +14,7 @@ The weighted KS-like statistic as described by Subramanian et al (2005).
 \references{
 Subramanian, A. et al. (2005) Gene Set Enrichment Analysis: A
   Knowledge-Based Approach for Interpreting Genome-Wide Expression
-  Profiles. \emph{PNAS} \strong{102} (43): 15545–50.
+  Profiles. \emph{PNAS} \strong{102} (43): 15545-50.
   doi:10.1073/pnas.0506580102.
 }
 \seealso{

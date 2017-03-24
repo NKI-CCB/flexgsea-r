@@ -4,7 +4,7 @@
 \alias{ggsea_calc_sig}
 \title{Calculate significance of gene set enrichments from permutations.}
 \usage{
-ggsea(x, y, gene.sets, sig.fun=ggsea_calc_sig)
+ggsea_calc_sig
 }
 \description{
 Calculates significance like Subramanian et al.. Significance is calculated
@@ -15,7 +15,7 @@ with less permutations.
 \references{
 Subramanian, A. et al. (2005) Gene Set Enrichment Analysis: A
   Knowledge-Based Approach for Interpreting Genome-Wide Expression
-  Profiles. \emph{PNAS} \strong{102} (43): 15545–50.
+  Profiles. \emph{PNAS} \strong{102} (43): 15545-50.
   doi:10.1073/pnas.0506580102.
 }
 \seealso{
