@@ -211,23 +211,28 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
         stopifnot(is.character(gene.sets[[i]]))
     }
 
-    if (t.x & is.null(rownames(x))) {
-        if(is.null(gene.names) | nrow(x) != length(gene.names)) {
-            stop("Gene names should be given in gene.name or as column",
-                 "names of x")
+    if (!is.null(gene.names)) {
+        if(t.x) {
+            stopifnot(nrow(x) == length(gene.names))
+            rownames(x) <- gene.names
+        } else {
+            stopifnot(ncol(x) == length(gene.names))
+            colnames(x) <- gene.names
         }
-        rownames(x) <- gene.names
-    } else if (!t.x & is.null(colnames(x))) {
-        if(is.null(gene.names) | ncol(x) != length(gene.names)) {
-            stop("Gene names should be given in gene.name or as column",
-                 "names of x")
-        }
-        colnames(x) <- gene.names
     } else if (t.x) {
+        if (is.null(rownames(x))) {
+            stop("Gene names should be given in gene.name or as row",
+                 "names of x")
+        }
         gene.names <- rownames(x)
     } else {
+        if (is.null(colnames(x))) {
+            stop("Gene names should be given in gene.name or as col",
+                 "names of x")
+        }
         gene.names <- colnames(x)
     }
+
     if (is.null(colnames(y))) {
         colnames(y) <- paste0('Response ', seq(ncol(y)))
     }
