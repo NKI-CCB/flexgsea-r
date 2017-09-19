@@ -39,7 +39,8 @@ named_empty_list <- function(names) {
 #'   \item{\code{x}:}{The data matrix \code{x}, exactly as given to the
 #'      \code{gsea} function.}
 #'   \item{\code{y}:}{Response variables to test for gene set enrichment.
-#'      A permutation of the \code{y} given to the \code{gsea} function.
+#'      The \code{y} given to the \code{gsea} function or a permutation of
+#'      \code{y}.
 #'      This is a matrix with samples in the rows, and output variables in
 #'      the columns.}
 #' }
@@ -103,7 +104,7 @@ named_empty_list <- function(names) {
 #' @seealso Functions for significance calculation:
 #'   \code{\link{ggsea_calc_sig}},\code{\link{ggsea_calc_sig_simple}}.
 #'
-#' @param x Gene expression matrix (genes by samples), or EList object
+#' @param x Gene expression matrix (samples by genes), or EList object
 #'   produced by, for example, \code{limma::\link[limma]{voom}}.
 #' @param y Classes or other response variables to analyse for gene set enrichment.
 #'   Vector with length of the number of features, or sample by variable
