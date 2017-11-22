@@ -10,7 +10,7 @@ ggsea(x, y, gene.sets, gene.score.fn = ggsea_s2n, es.fn = ggsea_weighted_ks,
   parallel = NULL, abs = FALSE, return_values = character())
 }
 \arguments{
-\item{x}{Gene expression matrix (genes by samples), or EList object
+\item{x}{Gene expression matrix (samples by genes), or EList object
 produced by, for example, \code{limma::\link[limma]{voom}}.}
 
 \item{y}{Classes or other response variables to analyse for gene set enrichment.
@@ -100,7 +100,8 @@ A gene score calculation function should take the following arguments:
   \item{\code{x}:}{The data matrix \code{x}, exactly as given to the
      \code{gsea} function.}
   \item{\code{y}:}{Response variables to test for gene set enrichment.
-     A permutation of the \code{y} given to the \code{gsea} function.
+     The \code{y} given to the \code{gsea} function or a permutation of
+     \code{y}.
      This is a matrix with samples in the rows, and output variables in
      the columns.}
 }
