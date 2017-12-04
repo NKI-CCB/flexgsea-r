@@ -41,6 +41,11 @@ test_that("Names of rows in output is names of genes", {
     expect_equal(rownames(scores.single), colnames(x))
     expect_equal(rownames(scores.abs), colnames(x))
 })
+test_that("Output is finite", {
+    expect_true(all(is.finite(scores)))
+    expect_true(all(is.matrix(scores.abs)))
+    expect_true(all(is.matrix(scores.single)))
+})
 test_that("Correlated response and variable get ranked at top", {
     expect_equal(names(which.max(scores[, 'y1'])), 'x3')
     expect_true(names(which.max(scores.abs[, 'y1'])) %in% c('x3', 'x4'))

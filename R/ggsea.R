@@ -159,8 +159,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
     if (is.vector(y)) {
         y <- matrix(y, ncol=1)
     }
-    stopifnot(is.matrix(y))
-    n.response <- ncol(y)
+    stopifnot(is.matrix(y) || is.data.frame(y))
 
     if (is.matrix(x)) {
         t.x <- F
@@ -234,9 +233,6 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
         gene.names <- colnames(x)
     }
 
-    if (is.null(colnames(y))) {
-        colnames(y) <- paste0('Response ', seq(ncol(y)))
-    }
     if (verbose) {
         message("Filtering gene sets on size in dataset")
     }
@@ -258,14 +254,19 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
         gene.scores <- gene.score.fn(x, y, abs=abs)
     }
     stopifnot(!is.null(dim(gene.scores)))
-    stopifnot(dim(gene.scores) == c(n.genes, n.response))
+    responses = colnames(gene.scores)
+    if (is.null(responses)) {
+        responses <- paste0('Response ', seq(ncol(y)))
+    }
+    stopifnot(!is.null(responses))
+    stopifnot(dim(gene.scores)[1] == n.genes)
     gene.scores <- array(gene.scores, c(dim(gene.scores), 1),
                      dimnames=c(dimnames(gene.scores), list(NULL)))
     if (verbose) {
         message("Calculating ES (Observed)")
     }
     prep <- es.fn$prepare(gene.scores)
-    es <- array(NA_real_, c(n.gene.sets, n.response))
+    es <- array(NA_real_, c(n.gene.sets, length(responses)))
 
     extra_stats <- structure(
         rep(list(array(NA_real_, dim(es))), length(return_stats)),
@@ -274,7 +275,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
     extra <- named_full_list(
         named_full_list(
             named_empty_list(names=names(gene.sets)),
-            names=colnames(y)),
+            names=responses),
         names=es.fn$extra)
     for (gs.i in seq_along(gene.sets)) {
         gs.index <- match(gene.sets[[gs.i]], gene.names)
@@ -286,7 +287,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
             extra_stats[[n]][gs.i, ] <- s[[n]][, 1]
         }
         for (n in names(extra)) {
-            for (response.i in seq(n.response)) {
+            for (response.i in seq_along(responses)) {
                 extra[[n]][[response.i]][[gs.i]] <- s[[n]][[response.i]][[1]]
             }
         }
@@ -304,7 +305,8 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
         perm.fun <- ggsea_perm_sequential
     }
     es.null <- perm.fun(x, y, gene.sets, gene.names, nperm, block.size,
-                        gene.score.fn, es.fn, abs=abs, verbose=verbose)
+                        gene.score.fn, es.fn, responses, abs=abs,
+                        verbose=verbose)
 
     ##############
     # Significance
@@ -313,13 +315,13 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
     }
     if (parallel) {
         `%dopar%` <- foreach::`%dopar%`
-        sig <- foreach::foreach(response.i = seq(n.response)) %dopar% {
+        sig <- foreach::foreach(response.i = seq_along(responses)) %dopar% {
             sig.fun(es[, response.i], es.null[, response.i, ],
                     verbose=FALSE, abs=abs)
         }
     } else {
-        sig <- vector('list', n.response)
-        for (response.i in seq(n.response)) {
+        sig <- vector('list', length(responses))
+        for (response.i in seq_along(responses)) {
             sig[[response.i]] <- sig.fun(es[, response.i],
                                          es.null[, response.i, ],
                                          verbose=verbose, abs=abs)
@@ -328,13 +330,13 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
 
     ################
     # Prepare output
-    for (response.i in seq(n.response)) {
+    for (response.i in seq_along(responses)) {
         for (n in names(extra_stats)) {
             sig[[response.i]][[n]] <- extra_stats[[n]][, response.i]
         }
     }
     res_table <- lapply(sig, dplyr::mutate_, GeneSet=~names(gene.sets))
-    names(res_table) <- colnames(y)
+    names(res_table) <- responses
     res <- list(table=res_table)
     if ('es_null' %in% return_values) {
         res$es_null=es.null
@@ -351,17 +353,16 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
 }
 
 ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
-                                  block.size, gene.score.fn, es.fn,
+                                  block.size, gene.score.fn, es.fn, responses,
                                   abs=F, verbose=F) {
     n.gene.sets <- length(gene.sets)
     n.genes <- length(gene.names)
     n.samples <- nrow(y)
-    n.response <- ncol(y)
 
     es.null <- array(NA_real_,
-        dim=c(n.gene.sets, n.response, nperm),
+        dim=c(n.gene.sets, length(responses), nperm),
         dimnames=list(GeneSet=names(gene.sets),
-                      Response=colnames(y),
+                      Response=responses,
                       perm=NULL)
     )
     block.start <- 1
@@ -372,14 +373,24 @@ ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
         }
         nperm.block  <- block.end - block.start + 1
 
-        gene.scores.null <- array(0, c(n.genes, n.response, nperm.block))
+        gene.scores.null <- array(0, c(n.genes, length(responses),
+                                       nperm.block))
         if (verbose) {
             message(paste0("Scoring Genes (Null) ", block.start, '--',
                            block.end))
         }
         for (perm.i in seq_len(nperm.block)) {
             y.perm <- y[sample.int(nrow(y)),]
-            gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm, abs=abs)
+            y_attrs <- attributes(y)
+            for (i in seq_along(y_attrs)) {
+                if (names(y_attrs)[[i]] %in% c('dim', 'dimnames', 'names',
+                                               'row.names')) {
+                    next
+                }
+                attr(y.perm, names(y_attrs)[[i]]) <- y_attrs[[i]]
+            }
+            r <- gene.score.fn(x, y.perm, abs=abs)
+            gene.scores.null[, , perm.i] <- r
             if (verbose) {
                 message(".", appendLF=F)
                 utils::flush.console()
@@ -405,13 +416,12 @@ ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
 }
 
 ggsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
-                                block.size, gene.score.fn, es.fn, abs=F,
-                                verbose=F) {
+                                block.size, gene.score.fn, es.fn, responses,
+                                abs=F, verbose=F) {
     `%dopar%` <- foreach::`%dopar%`
     n.gene.sets <- length(gene.sets)
     n.genes <- length(gene.names)
     n.samples <- nrow(y)
-    n.response <- ncol(y)
 
     n.blocks <- ceiling(nperm / block.size)
     block.i <- 0
@@ -423,15 +433,24 @@ ggsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
             nperm.block <- block.size
         }
 
-        gene.scores.null <- array(0, c(n.genes, n.response, nperm.block))
+        gene.scores.null <- array(0, c(n.genes, length(responses),
+                                       nperm.block))
         for (perm.i in seq_len(nperm.block)) {
             y.perm <- y[sample.int(nrow(y)),]
+            y_attrs <- attributes(y)
+            for (i in seq_along(y_attrs)) {
+                if (names(y_attrs)[[i]] %in% c('dim', 'dimnames', 'names',
+                                               'row.names')) {
+                    next
+                }
+                attr(y.perm, names(y_attrs)[[i]]) <- y_attrs[[i]]
+            }
             gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm, abs=abs)
         }
         es.null.block <- array(NA_real_,
-            dim=c(n.gene.sets, n.response, nperm.block),
+            dim=c(n.gene.sets, length(responses), nperm.block),
             dimnames=list(GeneSet=names(gene.sets),
-                          Response=colnames(y),
+                          Response=responses,
                           perm=NULL)
         )
         prep <- es.fn$prepare(gene.scores.null)
@@ -601,6 +620,10 @@ ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F,
     res
 }
 
+is.model.matrix <- function(x) {
+    is.matrix(x) && !is.null(attr(x, 'assign', T))
+}
+
 #' Score genes in a linear regression model.
 #'
 #' Scores genes by their coefficients in a linear regression
@@ -614,19 +637,34 @@ ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F,
 #'
 #' @export
 ggsea_lm <- function (x, y, abs=F) {
-    if (!is.matrix(y)) {
-        y = matrix(y, dimnames=list(names(y), 'Response'))
+    if (!is.model.matrix(y)) {
+        if (is.null(ncol(y))) {
+            y = as.matrix(y, ncol=1)
+        }
+        if (is.null(colnames(y))) {
+            if (ncol(y) > 1) {
+                colnames(y) <- paste0("Response", 1:ncol(y))
+            } else {
+                colnames(y) <- "Response"
+            }
+        }
+        if (!is.data.frame(y)) {
+            y = as.data.frame(y, stringsAsFactors=T)
+        }
+        y = model.matrix(~ ., y)
     }
-    n.response <- ncol(y)
     n.genes <- ncol(x)
-    coef <- t(lm(x ~ y)$coefficients[-1, , drop=F])
-    colnames(coef) <- colnames(y)
-    rownames(coef) <- colnames(x)
-    coef <- apply(coef, 2, '/', apply(x, 2, sd))
-    if (abs) {
-        coef <- base::abs(coef)
+    fit <- lm.fit(y, x)
+    coeff <- t(fit$coefficients)
+    if (colnames(coeff)[[1]] == "(Intercept)") {
+        coeff = coeff[, -1, drop=F]
     }
-    coef
+    rownames(coeff) <- colnames(x)
+    t <- apply(coeff, 2, '/', apply(x, 2, sd))
+    if (abs) {
+        t <- abs(t)
+    }
+    t
 }
 
 #' Score genes by there signal to noise ratio.

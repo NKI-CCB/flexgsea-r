@@ -1,6 +1,5 @@
 requireNamespace('dplyr', quietly=T)
 
-context("ggsea")
 
 d = dplyr::data_frame(
     x1 = c(-0.91036224, -0.23633198,  0.07675882, -0.14270400),
@@ -17,15 +16,33 @@ y = data.matrix(dplyr::select(d, dplyr::starts_with('y')))
 gs = list(pw1=c('x1', 'x2', 'x3'), pw2=c('x2', 'x2.big'),
           pw3=c('x3', 'x5'))
 
-for (esf in list(ggsea_maxmean, ggsea_weighted_ks)) {
+to_mm <- function(x) {
+    x = as.data.frame(x)
+    m = model.matrix(~ ., x)
+    m
+}
+
+to_mm_interactions <- function(x) {
+    x = as.data.frame(x)
+    m = model.matrix(~ y1 * y2, x)
+    m
+}
+
+for (y_format_ in alist(as.matrix, as.data.frame, to_mm, to_mm_interactions)) {
+for (esf_ in alist(ggsea_maxmean, ggsea_weighted_ks)) {
 for (parallel in c(F,T,NULL)) {
+    context(paste("ggsea", deparse(y_format_), deparse(esf_),
+                  format(parallel)))
+    y_format = eval(y_format_)
+    esf = eval(esf_)
     if (parallel && !(requireNamespace('foreach', quietly=T) ||
                       requireNamespace('doMC', quietly=T))) {
         next
     } else {
         doMC::registerDoMC(2)
     }
-    res <- ggsea(x, y, gs, es.fn=esf, nperm=100, verbose=F, gs.size.min=1,
+    res <- ggsea(x, y_format(y), gs, es.fn=esf, nperm=100, verbose=F,
+                 gs.size.min=1,
                  block.size=11, parallel=parallel, gene.score.fn=ggsea_lm,
                  return_values=c('es_null'))
 
@@ -35,8 +52,12 @@ for (parallel in c(F,T,NULL)) {
     test_that("ggsea result table is a list", {
         expect_true(is.list(res[['table']]))
     })
+    ynames = colnames(y)
+    if (deparse(y_format_) == 'to_mm_interactions') {
+        ynames = c(ynames, 'y1:y2')
+    }
     test_that("ggsea gives results for all predictors in order", {
-        expect_equal(names(res[['table']]), colnames(y))
+        expect_equal(names(res[['table']]), ynames)
     })
     test_that("ggsea gives results for all pathways, in order", {
         for (r in res[['table']]) {
@@ -50,7 +71,7 @@ for (parallel in c(F,T,NULL)) {
         expect_equal(dimnames(res[['es_null']])[[1]], names(gs))
     })
     test_that("ggsea gives results es_null for all predictors in order", {
-        expect_equal(dimnames(res[['es_null']])[[2]], colnames(y))
+        expect_equal(dimnames(res[['es_null']])[[2]], ynames)
     })
     test_that("ggsea gives p values between 0 and 1", {
         for (i in seq_along(res[['table']])) {
@@ -58,4 +79,4 @@ for (parallel in c(F,T,NULL)) {
             expect_true(all(res[['table']][[i]]$p <= 1.0))
         }
     })
-}}
+}}}
