@@ -3,3 +3,4 @@
 .RData
 tests/lib/
 docs/
+inst/doc

@@ -1,0 +1,84 @@
+---
+title: "GGSEA with limma voom"
+author: "Tycho Bismeijer"
+date: "2017-12-06"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{GGSEA with limma voom}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+set.seed(42)
+```
+
+
+```{r generate-data, include = FALSE}
+n_samples <- 10
+n_genes <- 2500
+spiked_geneset_size = 30
+counts <- matrix(rnbinom(n_genes * n_samples, mu=1000, size=2), ncol=n_samples)
+dimnames(counts) <- list(
+    'gene'=paste0('g', 1:n_genes),
+    'sample'=paste0('samples', 1:n_samples))
+y <- data.frame(group=letters[sample.int(2, n_samples, replace=T)])
+spiked_geneset = paste0('g', sample.int(n_genes, spiked_geneset_size))
+counts[spiked_geneset, y == 'b'] = (counts[spiked_geneset, y == 'b'] + 
+    rnbinom(spiked_geneset_size * sum(y == 'b'), mu=1000, size=10))
+gene_sets <- sapply(paste0('gene_set', 2:10), function (i) {
+    paste0('g', sample.int(n_genes, rnorm(1, 25, 10)))
+}, simplify=F)
+gene_sets[['gene_set1']] = spiked_geneset
+```
+
+We have generated a small random dataset with `r n_genes` genes and
+`r n_samples` samples. The samples are divided into two groups: 'a' and 'b'.
+We also generated `r length(gene_sets)` random gene sets. Gene set 1 is enriched
+samples of group b, so should come out as significant.
+
+```{r show data}
+str(y)
+str(counts)
+```
+
+First step in the gene set enrichment analysis with limma is to define the experiment design.
+```{r design}
+design <- model.matrix(~ group, y)
+```
+
+Second we use voom to convert to log2 count per million (CPM) and
+calculate precision weights.
+```{r voom}
+dge <- edgeR::DGEList(counts)
+dge <- edgeR::calcNormFactors(dge)
+v <- limma::voom(dge, design)
+```
+
+Finally, we run GGSEA with `ggsea_limma` as the gene scoring function. 
+```{r ggsea, message=F}
+library(ggsea)
+gse <- ggsea(v, design, gene_sets, ggsea_limma, nperm=1000)
+```
+
+The main results are contained in the `gse$table`, which is a list of the gene
+set enrichments. As we have a single analysis (a versus b) in this example it is
+list of length one. The list item is a `data.frame` with the statistics for
+every gene set.
+
+```{r str-table}
+str(gse$table[[1]])
+```
+
+We can use dplyr to select the enriched gene sets.
+
+```{r show-table}
+library(dplyr)
+gse$table[[1]] %>%
+    filter(fdr < 0.25) %>%
+    knitr::kable()
+```

@@ -13,5 +13,6 @@ Do not call directly, but give as the \option{gene.score.fn}  argument to
 \code{\link{ggsea}}.
 }
 \seealso{
-Other gene scoring functions: \code{\link{ggsea_lm}}
+Other gene scoring functions: \code{\link{ggsea_limma}},
+  \code{\link{ggsea_lm}}
 }

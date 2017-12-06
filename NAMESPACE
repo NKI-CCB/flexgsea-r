@@ -3,6 +3,7 @@
 export(ggsea)
 export(ggsea_calc_sig)
 export(ggsea_calc_sig_simple)
+export(ggsea_limma)
 export(ggsea_lm)
 export(ggsea_maxmean)
 export(ggsea_mean)
