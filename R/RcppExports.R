@@ -2,6 +2,6 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 s2n_C <- function(x, y) {
-    .Call('ggsea_s2n_C', PACKAGE = 'ggsea', x, y)
+    .Call('_ggsea_s2n_C', PACKAGE = 'ggsea', x, y)
 }
 
