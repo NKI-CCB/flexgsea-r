@@ -4,7 +4,7 @@
 \alias{ggsea_limma}
 \title{Score genes with limma with a design matrix.}
 \usage{
-ggsea_limma_dm
+ggsea_limma
 }
 \description{
 Scores genes by their coefficients in from limma. 

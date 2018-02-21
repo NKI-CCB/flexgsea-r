@@ -1,0 +1,7 @@
+ggsea v1.1 (Release date: 2018-02-21)
+================
+
+Changes:
+ 
+ *  Add ggsea_limma gene score function, as first support for RNA-seq data.
+ *  Number of variables in the results is now determined by the gene score function. Previously, the number of variables was determined by the number of input variables. This is still the case with the default gene score functions.

@@ -9,7 +9,7 @@
 #' \code{\link{ggsea}}.
 #'
 #' @family gene scoring functions
-#' @usage ggsea_limma_dm
+#' @usage ggsea_limma
 #'
 #' @export
 ggsea_limma <- function (x, y, abs=F) {
