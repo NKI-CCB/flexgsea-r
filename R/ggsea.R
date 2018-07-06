@@ -256,7 +256,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
     stopifnot(!is.null(dim(gene.scores)))
     responses = colnames(gene.scores)
     if (is.null(responses)) {
-        responses <- paste0('Response ', seq(ncol(y)))
+        responses <- paste0('Response ', seq(ncol(gene.scores)))
     }
     stopifnot(!is.null(responses))
     stopifnot(dim(gene.scores)[1] == n.genes)
