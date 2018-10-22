@@ -1,6 +1,6 @@
 Package: flexgsea
 Title: Flexible Gene Set Enrichment Analysis
-Version: 1.1
+Version: 1.2
 Authors@R: c(
 	person("Tycho", "Bismeijer", email = "t.bismeijer@nki.nl", role = c("aut", "cre")),
 	person("Yongsoo", "Kim", email = "yo.kim@nki.nl", role = c("ctb")),
