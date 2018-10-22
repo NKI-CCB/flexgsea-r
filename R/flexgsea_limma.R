@@ -6,13 +6,13 @@
 #' For RNA-seq data, use the
 #' \code{EList} object produced by the \code{\link[limma]{voom}} function.
 #' Do not call directly, but give as the \option{gene.score.fn}  argument to
-#' \code{\link{ggsea}}.
+#' \code{\link{flexgsea}}.
 #'
 #' @family gene scoring functions
-#' @usage ggsea_limma
+#' @usage flexgsea_limma
 #'
 #' @export
-ggsea_limma <- function (x, y, abs=F) {
+flexgsea_limma <- function (x, y, abs=F) {
     stopifnot(is.model.matrix(y))
 
     fit <- limma::lmFit(x, y)

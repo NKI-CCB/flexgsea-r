@@ -7,7 +7,7 @@ using namespace Rcpp;
 
 // s2n_C
 NumericMatrix s2n_C(NumericMatrix x, LogicalMatrix y);
-RcppExport SEXP _ggsea_s2n_C(SEXP xSEXP, SEXP ySEXP) {
+RcppExport SEXP _flexgsea_s2n_C(SEXP xSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -19,11 +19,11 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_ggsea_s2n_C", (DL_FUNC) &_ggsea_s2n_C, 2},
+    {"_flexgsea_s2n_C", (DL_FUNC) &_flexgsea_s2n_C, 2},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_ggsea(DllInfo *dll) {
+RcppExport void R_init_flexgsea(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

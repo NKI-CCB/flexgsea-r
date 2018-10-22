@@ -29,9 +29,9 @@ to_mm_interactions <- function(x) {
 }
 
 for (y_format_ in alist(as.matrix, as.data.frame, to_mm, to_mm_interactions)) {
-for (esf_ in alist(ggsea_maxmean, ggsea_weighted_ks)) {
+for (esf_ in alist(flexgsea_maxmean, flexgsea_weighted_ks)) {
 for (parallel in c(F,T,NULL)) {
-    context(paste("ggsea", deparse(y_format_), deparse(esf_),
+    context(paste("flexgsea", deparse(y_format_), deparse(esf_),
                   format(parallel)))
     y_format = eval(y_format_)
     esf = eval(esf_)
@@ -41,39 +41,39 @@ for (parallel in c(F,T,NULL)) {
     } else {
         doMC::registerDoMC(2)
     }
-    res <- ggsea(x, y_format(y), gs, es.fn=esf, nperm=100, verbose=F,
-                 gs.size.min=1,
-                 block.size=11, parallel=parallel, gene.score.fn=ggsea_lm,
-                 return_values=c('es_null'))
+    res <- flexgsea(x, y_format(y), gs, es.fn=esf, nperm=100, verbose=F,
+                    gs.size.min=1,
+                    block.size=11, parallel=parallel,
+                    gene.score.fn=flexgsea_lm, return_values=c('es_null'))
 
-    test_that("ggsea result is a list", {
+    test_that("flexgsea result is a list", {
         expect_true(is.list(res))
     })
-    test_that("ggsea result table is a list", {
+    test_that("flexgsea result table is a list", {
         expect_true(is.list(res[['table']]))
     })
     ynames = colnames(y)
     if (deparse(y_format_) == 'to_mm_interactions') {
         ynames = c(ynames, 'y1:y2')
     }
-    test_that("ggsea gives results for all predictors in order", {
+    test_that("flexgsea gives results for all predictors in order", {
         expect_equal(names(res[['table']]), ynames)
     })
-    test_that("ggsea gives results for all pathways, in order", {
+    test_that("flexgsea gives results for all pathways, in order", {
         for (r in res[['table']]) {
             expect_equal(r$GeneSet, names(gs))
         }
     })
-    test_that("ggsea result null is an array", {
+    test_that("flexgsea result null is an array", {
         expect_true(is.array(res[['es_null']]))
     })
-    test_that("ggsea gives results es_null for all pathways, in order", {
+    test_that("flexgsea gives results es_null for all pathways, in order", {
         expect_equal(dimnames(res[['es_null']])[[1]], names(gs))
     })
-    test_that("ggsea gives results es_null for all predictors in order", {
+    test_that("flexgsea gives results es_null for all predictors in order", {
         expect_equal(dimnames(res[['es_null']])[[2]], ynames)
     })
-    test_that("ggsea gives p values between 0 and 1", {
+    test_that("flexgsea gives p values between 0 and 1", {
         for (i in seq_along(res[['table']])) {
             expect_true(all(res[['table']][[i]]$p >= 0.0))
             expect_true(all(res[['table']][[i]]$p <= 1.0))

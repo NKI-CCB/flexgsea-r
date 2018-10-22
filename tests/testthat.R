@@ -1,4 +1,4 @@
 library(testthat)
-library(ggsea)
+library(flexgsea)
 
-test_check("ggsea")
+test_check("flexgsea")

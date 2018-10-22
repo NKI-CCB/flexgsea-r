@@ -8,8 +8,8 @@ es[4] <- min(es_null[4, ]) - 1
 es[5] <- max(es_null[5, ]) + 1
 
 sig_funs = list(
-    ggsea_calc_sig=ggsea_calc_sig,
-    ggsea_calc_sig_simple=ggsea_calc_sig_simple
+    flexgsea_calc_sig=flexgsea_calc_sig,
+    flexgsea_calc_sig_simple=flexgsea_calc_sig_simple
 )
 
 for (i in seq_along(sig_funs)) {
@@ -29,7 +29,7 @@ for (i in seq_along(sig_funs)) {
         expect_gte(min(sig$fwer), 0)
         expect_lte(max(sig$fwer), 1)
 
-        if (n == "ggsea_calc_sig") {
+        if (n == "flexgsea_calc_sig") {
             expect_is(sig$nes, "numeric")
         }
     })

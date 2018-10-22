@@ -3,7 +3,7 @@ Flexible Gene Set Enrichment Analysis
 
 [![DOI](https://zenodo.org/badge/86062898.svg)](https://zenodo.org/badge/latestdoi/86062898)
 
-ggsea is a R package to do gene set enrichment analysis [1]. Main advantages:
+flexgsea is a R package to do gene set enrichment analysis [1]. Main advantages:
 
  - Allows user defined functions.
    So you can use you favorite package for differential expression.
@@ -17,14 +17,16 @@ You can install from Github:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("NKI-CCB/ggsea")
+devtools::install_github("NKI-CCB/flexgsea-r")
 ```
 
-Main documentation is on the `ggsea` function in the package:
+Main documentation is on the `flexgsea` function in the package:
 
 ``` r
-help('ggsea', 'ggsea')
+help('flexgsea', 'flexgsea')
 ```
+
+This package was called ggsea before.
 
 References
 ----------

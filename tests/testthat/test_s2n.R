@@ -13,9 +13,9 @@ d = dplyr::data_frame(
 x = data.matrix(dplyr::select(d, dplyr::starts_with('x')))
 y = as.matrix(dplyr::select(d, dplyr::starts_with('y')))
 
-scores <- ggsea_s2n(x, y)
-scores.abs <- ggsea_s2n(x, y, abs=T)
-scores.single <- ggsea_s2n(x, y[,1])
+scores <- flexgsea_s2n(x, y)
+scores.abs <- flexgsea_s2n(x, y, abs=T)
+scores.single <- flexgsea_s2n(x, y[,1])
 test_that("Output is matrix", {
     expect_true(is.matrix(scores))
     expect_true(is.matrix(scores.abs))

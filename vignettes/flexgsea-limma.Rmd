@@ -59,10 +59,10 @@ dge <- edgeR::calcNormFactors(dge)
 v <- limma::voom(dge, design)
 ```
 
-Finally, we run GGSEA with `ggsea_limma` as the gene scoring function. 
+Finally, we run flexGSEA with `flexgsea_limma` as the gene scoring function. 
 ```{r ggsea, message=F}
-library(ggsea)
-gse <- ggsea(v, design, gene_sets, ggsea_limma, nperm=1000)
+library(flexgsea)
+gse <- flexgsea(v, design, gene_sets, flexgsea_limma, nperm=1000)
 ```
 
 The main results are contained in the `gse$table`, which is a list of the gene

@@ -14,9 +14,9 @@ dimnames(gene_scores)[[2]] <- paste0('response', seq(n_response))
 gene_set <- sample(seq(n_genes), 20)
 
 
-prep <- ggsea_weighted_ks$prepare(gene_scores)
-res <- ggsea_weighted_ks$run(gene_scores, gene_set, prep,
-                             return_stats=c('le_prop', 'max_es_at'))
+prep <- flexgsea_weighted_ks$prepare(gene_scores)
+res <- flexgsea_weighted_ks$run(gene_scores, gene_set, prep,
+                                return_stats=c('le_prop', 'max_es_at'))
 
 test_that("Output is data frame", {
     expect_is(res, "list")

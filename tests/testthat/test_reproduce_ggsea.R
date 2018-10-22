@@ -123,9 +123,9 @@ test_that("Same results of complete GSEA", {
         gs.size.threshold.min=1, gs.size.threshold.max=100,
         topgs=min(length(gs), 10), nperm=nperm)
     set.seed(7242)
-    res <- ggsea(x, y, gs,
-        gene.score.fn=ggsea_s2n, es.fn=ggsea_weighted_ks,
-        sig.fun=ggsea_calc_sig, nperm=nperm, verbose=F,
+    res <- flexgsea(x, y, gs,
+        gene.score.fn=flexgsea_s2n, es.fn=flexgsea_weighted_ks,
+        sig.fun=flexgsea_calc_sig, nperm=nperm, verbose=F,
         gs.size.min=1, gs.size.max=100, block.size=100, parallel=T)$table[[1]]
     expect_equal(res_gsea[order(res_gsea$GS), 'ES'][[1]],
                  res[order(res$GeneSet), 'es'][[1]], tolerance=.001)

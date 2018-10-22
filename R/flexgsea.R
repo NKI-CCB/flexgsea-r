@@ -1,7 +1,7 @@
 #' @importFrom stats lm sd p.adjust
 #' @importFrom abind abind
 
-#' @useDynLib ggsea
+#' @useDynLib flexgsea
 #' @importFrom Rcpp sourceCpp
 
 named_full_list <- function(value, names) {
@@ -13,10 +13,10 @@ named_empty_list <- function(names) {
 
 #' Flexible Gene Set Enrichment Analysis.
 #'
-#' \code{ggsea()} does a gene set enrichment analysis, calculating significance
+#' \code{flexgsea()} does a gene set enrichment analysis, calculating significance
 #' by sample permutation. Functions to score genes, calculate enrichment
 #' statistic (ES), or calculate significance can be user defined and several
-#' options are supplied in the \pkg{ggsea} package.
+#' options are supplied in the \pkg{flexgsea} package.
 #'
 #' Gene sets are filtered. First, only genes which exist in the data set
 #' \option{x} are kept. Then, gene sets smaller than \option{gs.size.min} or
@@ -52,7 +52,7 @@ named_empty_list <- function(names) {
 #'      A permutation of the \code{y} given to the \code{gsea} function.
 #'      This is a matrix with samples in the rows, and output variables in
 #'      the columns.}
-#' } A simple example is \code{\link{ggsea_lm}}.
+#' } A simple example is \code{\link{flexgsea_lm}}.
 #'
 #' @section User-defined gene set enrichment function \code{es.fn}:
 #' A list of two functions (\code{prepare} and \code{run}) and two character
@@ -79,9 +79,9 @@ named_empty_list <- function(names) {
 #' }
 #' It should return a list with \code{es} and any requested extra statistics
 #' and other values. The extra statistics are put into the results table, while
-#' the other extra values are added to the list returned by \code{ggsea}. The
+#' the other extra values are added to the list returned by \code{flexgsea}. The
 #' \code{es} element should be a matrix (response x permutation).
-#' A simple example is \code{\link{ggsea_mean}}.
+#' A simple example is \code{\link{flexgsea_mean}}.
 #'
 #' @section User-defined significance calculation \code{sig.fun}:
 #' A significance calculation function should take the following arguments:
@@ -90,19 +90,19 @@ named_empty_list <- function(names) {
 #'     numeric vector with a length equal to the number of gene sets.}
 #'   \item{\code{es_null}:}{Enrichment scores from permuted labels, a numeric
 #'     array with dimensions number of gene sets by number of permutations.}
-#'   \item{\code{verbose}:}{Passed from main \code{ggsea} function.}
-#'   \item{\code{abs}:}{Passed from main \code{ggsea} function.}
+#'   \item{\code{verbose}:}{Passed from main \code{flexgsea} function.}
+#'   \item{\code{abs}:}{Passed from main \code{flexgsea} function.}
 #' }
 #' It should return a data frame with a row for every gene set, and a column
-#' for every statistic. This data frame is returned by the main \code{ggsea}
+#' for every statistic. This data frame is returned by the main \code{flexgsea}
 #' function in the \code{table} list after appending gene set names.
 #'
-#' @seealso Gene scoring functions: \code{\link{ggsea_s2n}},
-#'   \code{\link{ggsea_lm}}.
-#' @seealso Gene set enrichment functions: \code{\link{ggsea_mean}},
-#'   \code{\link{ggsea_weighted_ks}}, \code{\link{ggsea_maxmean}}.
+#' @seealso Gene scoring functions: \code{\link{flexgsea_s2n}},
+#'   \code{\link{flexgsea_lm}}.
+#' @seealso Gene set enrichment functions: \code{\link{flexgsea_mean}},
+#'   \code{\link{flexgsea_weighted_ks}}, \code{\link{flexgsea_maxmean}}.
 #' @seealso Functions for significance calculation:
-#'   \code{\link{ggsea_calc_sig}},\code{\link{ggsea_calc_sig_simple}}.
+#'   \code{\link{flexgsea_calc_sig}},\code{\link{flexgsea_calc_sig_simple}}.
 #'
 #' @param x Gene expression matrix (samples by genes), or EList object
 #'   produced by, for example, \code{limma::\link[limma]{voom}}.
@@ -112,15 +112,15 @@ named_empty_list <- function(names) {
 #' @param gene.sets Gene sets. Either a filename of a gmt file, or gene sets
 #'   read by the \code{\link{read_gmt}} function.
 #' @param gene.score.fn Function to calculate gene scores. The signal to noise
-#'   ratio (\code{\link{ggsea_s2n}}) is appropriate for comparing two classes.
-#'   Correlation (\code{\link{ggsea_lm}}) can be  used for real valued
+#'   ratio (\code{\link{flexgsea_s2n}}) is appropriate for comparing two classes.
+#'   Correlation (\code{\link{flexgsea_lm}}) can be  used for real valued
 #'   variables. Can be user-defined, as documented below.
 #' @param es.fn Function to calculate enrichment scores (ES). Default is the
 #'   weighted KS statistic by Subramanian et al (2005). Can be user-defined, as
 #'   documented below.
 #' @param sig.fun Function to calculate significance of results. Using
-#'   \code{ggsea_calc_sig_simple} is recommended for a \code{es.fn} function
-#'   other than the default \code{ggsea_weighted_ks} as the default might not
+#'   \code{flexgsea_calc_sig_simple} is recommended for a \code{es.fn} function
+#'   other than the default \code{flexgsea_weighted_ks} as the default might not
 #'   be appropriate. Can be user-defined, as documented below.
 #' @param gene.names Gene identifiers for the genes in the data \code{x} that
 #'   match the identifiers in \code{gene.sets}. Defaults to the the
@@ -148,8 +148,8 @@ named_empty_list <- function(names) {
 #'   elements are the values requested in \option{return_values}.
 #'
 #' @export
-ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
-                  es.fn=ggsea_weighted_ks, sig.fun=ggsea_calc_sig,
+flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
+                  es.fn=flexgsea_weighted_ks, sig.fun=flexgsea_calc_sig,
                   gene.names=NULL, nperm=1000, gs.size.min=10,
                   gs.size.max=300, verbose=TRUE, block.size=100,
                   parallel=NULL, abs=FALSE, return_values=character()) {
@@ -300,9 +300,9 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
         message(paste0("Performing Permutation test"))
     }
     if (parallel) {
-        perm.fun <- ggsea_perm_parallel
+        perm.fun <- flexgsea_perm_parallel
     } else {
-        perm.fun <- ggsea_perm_sequential
+        perm.fun <- flexgsea_perm_sequential
     }
     es.null <- perm.fun(x, y, gene.sets, gene.names, nperm, block.size,
                         gene.score.fn, es.fn, responses, abs=abs,
@@ -352,7 +352,7 @@ ggsea <- function(x, y, gene.sets, gene.score.fn=ggsea_s2n,
     res
 }
 
-ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
+flexgsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
                                   block.size, gene.score.fn, es.fn, responses,
                                   abs=F, verbose=F) {
     n.gene.sets <- length(gene.sets)
@@ -415,7 +415,7 @@ ggsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
     es.null
 }
 
-ggsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
+flexgsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
                                 block.size, gene.score.fn, es.fn, responses,
                                 abs=F, verbose=F) {
     `%dopar%` <- foreach::`%dopar%`
@@ -531,11 +531,11 @@ calc_fdr_nes <- function (nes, nes_null, verbose=F, abs=F) {
 #' Calculates significance by the rank of ES score in the permuted values.
 #' Significance is calculated separately per gene set.
 #'
-#' @usage ggsea_calc_sig_simple
+#' @usage flexgsea_calc_sig_simple
 #' @family functions for significance calculation
 #' @export
-ggsea_calc_sig_simple <- function (es, es.null, verbose=F, abs=F) {
-    ggsea_calc_sig(es, es.null, split.p=F, calc.nes=F, verbose=verbose,
+flexgsea_calc_sig_simple <- function (es, es.null, verbose=F, abs=F) {
+    flexgsea_calc_sig(es, es.null, split.p=F, calc.nes=F, verbose=verbose,
                    abs=abs)
 }
 
@@ -550,11 +550,11 @@ ggsea_calc_sig_simple <- function (es, es.null, verbose=F, abs=F) {
 #'   Knowledge-Based Approach for Interpreting Genome-Wide Expression
 #'   Profiles. \emph{PNAS} \strong{102} (43): 15545-50.
 #'   doi:10.1073/pnas.0506580102.
-#' @usage ggsea_calc_sig
+#' @usage flexgsea_calc_sig
 #' @family functions for significance calculation
 #' @export
 #' @export
-ggsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F,
+flexgsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F,
                             abs=F) {
     stopifnot(is.numeric(es))
     stopifnot(is.vector(es))
@@ -630,13 +630,13 @@ is.model.matrix <- function(x) {
 #' model of \option{y} onto \option{x}. When there is one response variable
 #' this is equivalent to Pearson correlation.
 #' Do not call directly, but give as the \option{gene.score.fn}  argument to
-#' \code{\link{ggsea}}.
+#' \code{\link{flexgsea}}.
 #'
 #' @family gene scoring functions
-#' @usage ggsea_lm
+#' @usage flexgsea_lm
 #'
 #' @export
-ggsea_lm <- function (x, y, abs=F) {
+flexgsea_lm <- function (x, y, abs=F) {
     if (!is.model.matrix(y)) {
         if (is.null(ncol(y))) {
             y = as.matrix(y, ncol=1)
@@ -672,13 +672,13 @@ ggsea_lm <- function (x, y, abs=F) {
 #' Scores genes by the signal to noise ration (s2n) a. Requires \option{y}
 #' to have two classes.
 #' Do not call directly, but give as the \option{gene.score.fn}  argument to
-#' \code{\link{ggsea}}.
+#' \code{\link{flexgsea}}.
 #'
 #' @family gene scoring functions
-#' @usage ggsea_s2n
+#' @usage flexgsea_s2n
 #'
 #' @export
-ggsea_s2n <- function (x, y, abs=F) {
+flexgsea_s2n <- function (x, y, abs=F) {
     if (!is.matrix(y)) {
         y = matrix(y, dimnames=list(names(y), 'Response'))
     }
@@ -710,7 +710,7 @@ ggsea_s2n <- function (x, y, abs=F) {
     coef
 }
 
-ggsea_maxmean_ <- function(gene.score, gene.set, prep,
+flexgsea_maxmean_ <- function(gene.score, gene.set, prep,
                            return_values=character(), return_stats=F) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
@@ -730,17 +730,17 @@ ggsea_maxmean_ <- function(gene.score, gene.set, prep,
 
 #' The maxmean statistic for calculating gene set enrichement scores.
 #'
-#' @usage ggsea_maxmean
+#' @usage flexgsea_maxmean
 #' @family gene set enrichment functions
 #'
 #' @export
-ggsea_maxmean <- list(
-    run = ggsea_maxmean_,
+flexgsea_maxmean <- list(
+    run = flexgsea_maxmean_,
     prepare = function(gene.score) { list() },
     extra_stats = character()
 )
 
-ggsea_mean_ <- function(gene.score, gene.set, prep,
+flexgsea_mean_ <- function(gene.score, gene.set, prep,
                         return_stats=F, return_values=character()) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
@@ -756,17 +756,17 @@ ggsea_mean_ <- function(gene.score, gene.set, prep,
 
 #' The mean statistic for calculating gene set enrichement scores.
 #'
-#' @usage ggsea_mean
+#' @usage flexgsea_mean
 #' @family gene set enrichment functions
 #'
 #' @export
-ggsea_mean <- list(
-    run = ggsea_mean_,
+flexgsea_mean <- list(
+    run = flexgsea_mean_,
     prepare = function(gene.score) { list() },
     extra_stats = character()
 )
 
-ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
+flexgsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
                                return_stats=c(), return_values=character()) {
     total.n.genes <- dim(gene.score)[1]
     n.response <- dim(gene.score)[2]
@@ -904,13 +904,13 @@ ggsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
 #'   Knowledge-Based Approach for Interpreting Genome-Wide Expression
 #'   Profiles. \emph{PNAS} \strong{102} (43): 15545-50.
 #'   doi:10.1073/pnas.0506580102.
-#' @usage ggsea_weighted_ks
+#' @usage flexgsea_weighted_ks
 #' @family gene set enrichment functions
 #'
 #'
 #' @export
-ggsea_weighted_ks <- list(
-    run = ggsea_weighted_ks_,
+flexgsea_weighted_ks <- list(
+    run = flexgsea_weighted_ks_,
     prepare = function(gene.score) {
         total.n.genes <- dim(gene.score)[1]
         gene.rank <- apply(gene.score, c(2, 3), function (s) {
