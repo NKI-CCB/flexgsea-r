@@ -97,6 +97,5 @@ for (parallel in c(F,T,NULL)) {
                     gs.size.min=1,
                     block.size=11, parallel=parallel,
                     gene.score.fn=flexgsea_lm, return_values=c('es_null'))
-    str(res$table)
     test_res(res, gs[1], colnames(y))
 }

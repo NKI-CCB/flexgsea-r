@@ -240,7 +240,7 @@ flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
         gs.size.min=gs.size.min, gs.size.max=gs.size.max, verbose=verbose)
     n.gene.sets <- length(gene.sets)
     if (n.gene.sets == 0) {
-        warning("No valid gene sets after filtering for size.")
+        stop("No valid gene sets after filtering for size.")
     }
 
     #########################
@@ -252,6 +252,9 @@ flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
         gene.scores <- gene.score.fn(x, y, t.x=t.x, abs=abs)
     } else {
         gene.scores <- gene.score.fn(x, y, abs=abs)
+    }
+    if (any(!is.finite(gene.scores))) {
+        stop("Gene scoring function returned NA or Inf. Check that all genes in x have a positive variance.")
     }
     stopifnot(!is.null(dim(gene.scores)))
     responses = colnames(gene.scores)
