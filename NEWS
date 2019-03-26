@@ -1,3 +1,10 @@
+flexgsea v1.3 (Release date: 2019-03-26)
+================
+
+Bugfixes:
+ * Give more informative error message when gene scoring function return NA
+ * Allow using only a single gene set
+
 flexgsea v1.2 (Release date: 2018-10-22)
 ================
 
