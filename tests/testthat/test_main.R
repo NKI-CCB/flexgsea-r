@@ -28,34 +28,13 @@ to_mm_interactions <- function(x) {
     m
 }
 
-for (y_format_ in alist(as.matrix, as.data.frame, to_mm, to_mm_interactions)) {
-for (esf_ in alist(flexgsea_maxmean, flexgsea_weighted_ks)) {
-for (parallel in c(F,T,NULL)) {
-    context(paste("flexgsea", deparse(y_format_), deparse(esf_),
-                  format(parallel)))
-    y_format = eval(y_format_)
-    esf = eval(esf_)
-    if (parallel && !(requireNamespace('foreach', quietly=T) ||
-                      requireNamespace('doMC', quietly=T))) {
-        next
-    } else {
-        doMC::registerDoMC(2)
-    }
-    res <- flexgsea(x, y_format(y), gs, es.fn=esf, nperm=100, verbose=F,
-                    gs.size.min=1,
-                    block.size=11, parallel=parallel,
-                    gene.score.fn=flexgsea_lm, return_values=c('es_null'))
-
+test_res <- function(res, gs, ynames) {
     test_that("flexgsea result is a list", {
         expect_true(is.list(res))
     })
     test_that("flexgsea result table is a list", {
         expect_true(is.list(res[['table']]))
     })
-    ynames = colnames(y)
-    if (deparse(y_format_) == 'to_mm_interactions') {
-        ynames = c(ynames, 'y1:y2')
-    }
     test_that("flexgsea gives results for all predictors in order", {
         expect_equal(names(res[['table']]), ynames)
     })
@@ -79,4 +58,45 @@ for (parallel in c(F,T,NULL)) {
             expect_true(all(res[['table']][[i]]$p <= 1.0))
         }
     })
+}
+
+for (y_format_ in alist(as.matrix, as.data.frame, to_mm, to_mm_interactions)) {
+for (esf_ in alist(flexgsea_maxmean, flexgsea_weighted_ks)) {
+for (parallel in c(F,T,NULL)) {
+    context(paste("flexgsea", deparse(y_format_), deparse(esf_),
+                  format(parallel)))
+    y_format = eval(y_format_)
+    esf = eval(esf_)
+    if (parallel && !(requireNamespace('foreach', quietly=T) ||
+                      requireNamespace('doMC', quietly=T))) {
+        next
+    } else {
+        doMC::registerDoMC(2)
+    }
+    res <- flexgsea(x, y_format(y), gs, es.fn=esf, nperm=100, verbose=F,
+                    gs.size.min=1,
+                    block.size=11, parallel=parallel,
+                    gene.score.fn=flexgsea_lm, return_values=c('es_null'))
+
+    ynames = colnames(y)
+    if (deparse(y_format_) == 'to_mm_interactions') {
+        ynames = c(ynames, 'y1:y2')
+    }
+    test_res(res, gs, ynames)
 }}}
+
+for (parallel in c(F,T,NULL)) {
+    context(paste("flexgsea_single_gene_set"))
+    if (parallel && !(requireNamespace('foreach', quietly=T) ||
+                      requireNamespace('doMC', quietly=T))) {
+        next
+    } else {
+        doMC::registerDoMC(2)
+    }
+    res <- flexgsea(x, y, gs[1], nperm=100, verbose=F,
+                    gs.size.min=1,
+                    block.size=11, parallel=parallel,
+                    gene.score.fn=flexgsea_lm, return_values=c('es_null'))
+    str(res$table)
+    test_res(res, gs[1], colnames(y))
+}

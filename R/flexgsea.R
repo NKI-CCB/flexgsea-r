@@ -1,5 +1,5 @@
 #' @importFrom stats lm sd p.adjust
-#' @importFrom abind abind
+#' @importFrom abind abind adrop
 
 #' @useDynLib flexgsea
 #' @importFrom Rcpp sourceCpp
@@ -316,15 +316,18 @@ flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
     if (parallel) {
         `%dopar%` <- foreach::`%dopar%`
         sig <- foreach::foreach(response.i = seq_along(responses)) %dopar% {
-            sig.fun(es[, response.i], es.null[, response.i, ],
-                    verbose=FALSE, abs=abs)
+            sig.fun(
+                es[, response.i],
+                adrop(es.null[, response.i, , drop=F], c(F, T, F)),
+                verbose=FALSE, abs=abs)
         }
     } else {
         sig <- vector('list', length(responses))
         for (response.i in seq_along(responses)) {
-            sig[[response.i]] <- sig.fun(es[, response.i],
-                                         es.null[, response.i, ],
-                                         verbose=verbose, abs=abs)
+            sig[[response.i]] <- sig.fun(
+                es[, response.i],
+                adrop(es.null[, response.i, , drop=F], c(F, T, F)),
+                verbose=verbose, abs=abs)
         }
     }
 
@@ -560,6 +563,7 @@ flexgsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F,
     stopifnot(is.vector(es))
     stopifnot(is.numeric(es_null))
     n.gene.sets <- length(es)
+    stopifnot(is.matrix(es_null))
     stopifnot(dim(es_null)[1] == n.gene.sets)
     n.perm <- dim(es_null)[2]
 
