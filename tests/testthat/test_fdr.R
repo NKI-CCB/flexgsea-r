@@ -1,6 +1,7 @@
 n_gene_sets <- 10
 n_perm = 1000
 
+suppressWarnings(RNGversion('3.4'))
 set.seed(7242)
 es <- rnorm(n_gene_sets)
 es_null <- matrix(rnorm(n_gene_sets*n_perm), n_gene_sets)

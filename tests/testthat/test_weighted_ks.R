@@ -4,6 +4,7 @@ n_genes <- 1000
 n_response <- 3
 n_perm <- 1
 
+suppressWarnings(RNGversion('3.4'))
 set.seed(7242)
 gene_scores <- array(rnorm(n_genes*n_response*n_perm),
                      c(n_genes, n_response, n_perm))

@@ -85,6 +85,7 @@ run_gsea <- function(x, y, gs, ...) {
 
 context("replicate GSEA")
 
+suppressWarnings(RNGversion('3.4'))
 set.seed(487)
 
 n_genes = 1000
