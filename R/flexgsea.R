@@ -248,7 +248,7 @@ flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
     if (verbose) {
         message("Scoring Genes (Observed)")
     }
-    if ('t.x' %in% methods::formalArgs(formals(gene.score.fn))) {
+    if ('t.x' %in% methods::formalArgs(gene.score.fn)) {
         gene.scores <- gene.score.fn(x, y, t.x=t.x, abs=abs)
     } else {
         gene.scores <- gene.score.fn(x, y, abs=abs)
