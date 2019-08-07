@@ -1,5 +1,6 @@
 #' @importFrom stats lm sd p.adjust
 #' @importFrom abind abind adrop
+#' @importFrom tibble tibble
 
 #' @useDynLib flexgsea
 #' @importFrom Rcpp sourceCpp
@@ -570,7 +571,7 @@ flexgsea_calc_sig <- function (es, es_null, split.p=T, calc.nes=T, verbose=F,
     stopifnot(dim(es_null)[1] == n.gene.sets)
     n.perm <- dim(es_null)[2]
 
-    res <- dplyr::data_frame_(list(es = ~es))
+    res <- tibble(es = es)
     if (n.perm == 0) {
         return (res)
     }
