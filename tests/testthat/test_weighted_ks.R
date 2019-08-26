@@ -43,3 +43,49 @@ test_that("Results did not change", {
     expect_equal_to_reference(res$le_prop, 'test_weighted_ks-le_prop.rds')
     expect_equal_to_reference(res$max_es_at, 'test_weighted_ks-max_es_at.rds')
 })
+
+context("weighted_ks_extra_returns")
+res <- flexgsea_weighted_ks$run(
+    gene_scores, gene_set, prep,
+    return_values=c('running_es_pos', 'running_es_neg', 'running_es_at', 'leading_edge'))
+
+
+test_that("Output has leading edge", {
+    expect_is(res$leading_edge, "list")
+    expect_length(res$leading_edge, n_response)
+    for (i in range(n_response)) {
+        expect_length(res$leading_edge[[i]], n_perm)
+        expect_lte(length(res$leading_edge[[i]][[1]]), length(gene_set))
+        expect_true(is.integer(res$leading_edge[[i]][[1]]))
+    }
+})
+
+test_that("Output has running ES at", {
+    expect_is(res$running_es_at, "list")
+    expect_length(res$running_es_at, n_response)
+    for (i in range(n_response)) {
+        expect_length(res$running_es_at[[i]], n_perm)
+        expect_length(res$running_es_at[[i]][[1]], length(gene_set))
+        expect_true(is.integer(res$running_es_at[[i]][[1]]))
+    }
+})
+
+test_that("Output has positive running ES", {
+    expect_is(res$running_es_neg, "list")
+    expect_length(res$running_es_neg, n_response)
+    for (i in range(n_response)) {
+        expect_length(res$running_es_neg[[i]], n_perm)
+        expect_length(res$running_es_at[[i]][[1]], length(gene_set))
+        expect_true(is.double(res$running_es_neg[[i]][[1]]))
+    }
+})
+
+test_that("Output has negative running ES", {
+    expect_is(res$running_es_pos, "list")
+    expect_length(res$running_es_pos, n_response)
+    for (i in range(n_response)) {
+        expect_length(res$running_es_pos[[i]], n_perm)
+        expect_length(res$running_es_at[[i]][[1]], length(gene_set))
+        expect_true(is.double(res$running_es_pos[[i]][[1]]))
+    }
+})
