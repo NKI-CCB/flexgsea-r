@@ -156,7 +156,7 @@ flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
 
     #########################
     # Prepare and check input
-    if (is.vector(y)) {
+    if (is.vector(y) || is.factor(y)) {
         y <- matrix(y, ncol=1)
     }
     stopifnot(is.matrix(y) || is.data.frame(y))
@@ -386,7 +386,7 @@ flexgsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
                            block.end))
         }
         for (perm.i in seq_len(nperm.block)) {
-            y.perm <- y[sample.int(nrow(y)),]
+            y.perm <- y[sample.int(nrow(y)), , drop=F]
             y_attrs <- attributes(y)
             for (i in seq_along(y_attrs)) {
                 if (names(y_attrs)[[i]] %in% c('dim', 'dimnames', 'names',
@@ -442,7 +442,7 @@ flexgsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
         gene.scores.null <- array(0, c(n.genes, length(responses),
                                        nperm.block))
         for (perm.i in seq_len(nperm.block)) {
-            y.perm <- y[sample.int(nrow(y)),]
+            y.perm <- y[sample.int(nrow(y)), , drop=F]
             y_attrs <- attributes(y)
             for (i in seq_along(y_attrs)) {
                 if (names(y_attrs)[[i]] %in% c('dim', 'dimnames', 'names',

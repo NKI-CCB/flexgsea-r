@@ -1,3 +1,11 @@
+flexgsea v1.4dev
+================
+
+Bufixes:
+ * Accept a single factor as input
+ * Plain dataframes y input is not garbled anymore
+
+
 flexgsea v1.3 (Release date: 2019-03-26)
 ================
 
