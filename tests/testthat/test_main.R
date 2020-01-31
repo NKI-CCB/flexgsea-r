@@ -1,6 +1,5 @@
 requireNamespace('dplyr', quietly=T)
 
-
 d = dplyr::data_frame(
     x1 = c(-0.91036224, -0.23633198,  0.07675882, -0.14270400),
     x2 = c(-0.0005694878, -0.9734813268, -2.0230448058,  0.3552175208),
@@ -99,3 +98,19 @@ for (parallel in c(F,T,NULL)) {
                     gene.score.fn=flexgsea_lm, return_values=c('es_null'))
     test_res(res, gs[1], colnames(y))
 }
+
+context("flexgsea_extra_outputs")
+esf = eval(esf_)
+res <- flexgsea(x, y, gs, es.fn=flexgsea_weighted_ks, nperm=100, verbose=F,
+                gs.size.min=1,
+                block.size=11, parallel=parallel,
+                gene.score.fn=flexgsea_lm,
+                return_values=c('gene_name', 'leading_edge', 'running_es_pos','running_es_neg',
+                                'running_es_at', 'es_null'))
+print(res)
+test_res(res, gs, colnames(y))
+test_that("running ES is a list", {
+    expect_true(is.list(res$running_es_pos))
+    expect_true(is.list(res$running_es_neg))
+    expect_true(is.list(res$running_es_at))
+})

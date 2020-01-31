@@ -876,7 +876,7 @@ flexgsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
                 res$running_es_neg[[i]][[j]] <- running_es_neg
             }
             if ('running_es_at' %in% return_values) {
-                res$running_es_at = gene.set[o]
+                res$running_es_at[[i]][[j]] = gene.set[o]
             }
             if (do_pos) {
                 wmes <- which.max(running_es_pos)
@@ -896,7 +896,7 @@ flexgsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
                 res$le_prop[i, j] <- length(le_idx) / length(gene.set)
             }
             if ('leading_edge' %in% return_values) {
-                res$leading_edge[[i]][[i]] <- le_idx
+                res$leading_edge[[i]][[j]] <- le_idx
             }
         }
     }
