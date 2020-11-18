@@ -45,15 +45,9 @@ named_empty_list <- function(names) {
 #'      This is a matrix with samples in the rows, and output variables in
 #'      the columns.}
 #' }
-#' It should return a matrix with samples in the columns and genes in the rows.
-#' \describe{
-#'   \item{\code{x}:}{The data matrix \code{x}, exactly as given to the
-#'      \code{gsea} function.}
-#'   \item{\code{y}:}{Response variables to test for gene set enrichment.
-#'      A permutation of the \code{y} given to the \code{gsea} function.
-#'      This is a matrix with samples in the rows, and output variables in
-#'      the columns.}
-#' } A simple example is \code{\link{flexgsea_lm}}.
+#' It should return a matrix with genes in the rows and responses in the columns. The number of
+#' responses is determined by this function, but must be the same for permuted y. The number of
+#' responses can be simply one. A simple example is \code{\link{flexgsea_lm}}.
 #'
 #' @section User-defined gene set enrichment function \code{es.fn}:
 #' A list of two functions (\code{prepare} and \code{run}) and two character
@@ -342,7 +336,7 @@ flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
             sig[[response.i]][[n]] <- extra_stats[[n]][, response.i]
         }
     }
-    res_table <- lapply(sig, dplyr::mutate_, GeneSet=~names(gene.sets))
+    res_table <- lapply(sig, dplyr::mutate, GeneSet=names(gene.sets))
     names(res_table) <- responses
     res <- list(table=res_table)
     if ('es_null' %in% return_values) {
