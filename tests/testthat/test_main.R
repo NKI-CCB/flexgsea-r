@@ -107,7 +107,6 @@ res <- flexgsea(x, y, gs, es.fn=flexgsea_weighted_ks, nperm=100, verbose=F,
                 gene.score.fn=flexgsea_lm,
                 return_values=c('gene_name', 'leading_edge', 'running_es_pos','running_es_neg',
                                 'running_es_at', 'es_null'))
-print(res)
 test_res(res, gs, colnames(y))
 test_that("running ES is a list", {
     expect_true(is.list(res$running_es_pos))
