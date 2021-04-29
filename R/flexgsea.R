@@ -397,6 +397,9 @@ flexgsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
                 utils::flush.console()
             }
         }
+        if (any(!is.finite(gene.scores.null))) {
+            stop("Gene scoring function returned NA or Inf.")
+        }
         if (verbose) {
             message("", appendLF=T)
         }
@@ -447,6 +450,9 @@ flexgsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
                 attr(y.perm, names(y_attrs)[[i]]) <- y_attrs[[i]]
             }
             gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm, abs=abs)
+        }
+        if (any(!is.finite(gene.scores.null))) {
+            stop("Gene scoring function returned NA or Inf.")
         }
         es.null.block <- array(NA_real_,
             dim=c(n.gene.sets, length(responses), nperm.block),
@@ -704,6 +710,9 @@ flexgsea_s2n <- function (x, y, abs=F) {
     })
 
     coef = s2n_C(x, y_bin)
+    # When the variance is zero in both classes the s2n is infinite, so we normalize
+    # to a value larger than all others.
+    coef[is.infinite(coef)] <- max(coef[is.finite(coef)]) * 1.1
     rownames(coef) = colnames(x)
     colnames(coef) = colnames(y)
     if (abs) {
@@ -828,72 +837,73 @@ flexgsea_weighted_ks_ <- function(gene.score, gene.set, prep, p=1.0,
                 }
             }
         }
-    }
-    for (i in seq(n.response)) {
-        if ('leading_edge' %in% return_values) {
-            res$leading_edge[[i]] <- list()
-        }
-        if ('running_es_pos' %in% return_values) {
-            res$running_es_pos[[i]] <- list()
-        }
-        if ('running_es_neg' %in% return_values) {
-            res$running_es_neg[[i]] <- list()
-        }
-        if ('running_es_at' %in% return_values) {
-            res$running_es_at[[i]] <- list()
-        }
-        for (j in seq_len(n.perm)) {
-            w <- abs(gene.score[gene.set, i, j])**p
-            w <- w / sum(w)
-            r <- prep$gene.rank[gene.set, i, j]
-            o = order(r)
-            wo = w[o]
-            d_hit <- cumsum(wo)
-            d_miss = ((r[o] - seq_along(r)) /
-                      (total.n.genes - length(gene.set)))
+    } else {
+      for (i in seq(n.response)) {
+          if ('leading_edge' %in% return_values) {
+              res$leading_edge[[i]] <- list()
+          }
+          if ('running_es_pos' %in% return_values) {
+              res$running_es_pos[[i]] <- list()
+          }
+          if ('running_es_neg' %in% return_values) {
+              res$running_es_neg[[i]] <- list()
+          }
+          if ('running_es_at' %in% return_values) {
+              res$running_es_at[[i]] <- list()
+          }
+          for (j in seq_len(n.perm)) {
+              w <- abs(gene.score[gene.set, i, j])**p
+              w <- w / sum(w)
+              r <- prep$gene.rank[gene.set, i, j]
+              o = order(r)
+              wo = w[o]
+              d_hit <- cumsum(wo)
+              d_miss = ((r[o] - seq_along(r)) /
+                        (total.n.genes - length(gene.set)))
 
-            running_es_pos = d_hit-d_miss
-            running_es_neg = running_es_pos-wo
+              running_es_pos = d_hit-d_miss
+              running_es_neg = running_es_pos-wo
 
-            es_neg <- min(running_es_neg)
-            es_pos <- max(running_es_pos)
-            do_pos = es_pos > -es_neg
-            if (do_pos) {
-                res$es[i, j] <- es_pos
-            } else {
-                res$es[i, j] <- es_neg
-            }
+              es_neg <- min(running_es_neg)
+              es_pos <- max(running_es_pos)
+              do_pos = es_pos > -es_neg
+              if (do_pos) {
+                  res$es[i, j] <- es_pos
+              } else {
+                  res$es[i, j] <- es_neg
+              }
 
-            if ('running_es_pos' %in% return_values) {
-                res$running_es_pos[[i]][[j]] <- running_es_pos
-            }
-            if ('running_es_neg' %in% return_values) {
-                res$running_es_neg[[i]][[j]] <- running_es_neg
-            }
-            if ('running_es_at' %in% return_values) {
-                res$running_es_at[[i]][[j]] = gene.set[o]
-            }
-            if (do_pos) {
-                wmes <- which.max(running_es_pos)
-                if (do_le) {
-                    le_idx <- gene.set[o][1:wmes]
-                }
-            } else {
-                wmes <- which.min(running_es_neg)
-                if (do_le) {
-                    le_idx <- gene.set[o][wmes:length(gene.set)]
-                }
-            }
-            if ('max_es_at' %in% return_stats) {
-                res$max_es_at[i, j] <- r[o][wmes]
-            }
-            if ('le_prop' %in% return_stats) {
-                res$le_prop[i, j] <- length(le_idx) / length(gene.set)
-            }
-            if ('leading_edge' %in% return_values) {
-                res$leading_edge[[i]][[j]] <- le_idx
-            }
-        }
+              if ('running_es_pos' %in% return_values) {
+                  res$running_es_pos[[i]][[j]] <- running_es_pos
+              }
+              if ('running_es_neg' %in% return_values) {
+                  res$running_es_neg[[i]][[j]] <- running_es_neg
+              }
+              if ('running_es_at' %in% return_values) {
+                  res$running_es_at[[i]][[j]] = gene.set[o]
+              }
+              if (do_pos) {
+                  wmes <- which.max(running_es_pos)
+                  if (do_le) {
+                      le_idx <- gene.set[o][1:wmes]
+                  }
+              } else {
+                  wmes <- which.min(running_es_neg)
+                  if (do_le) {
+                      le_idx <- gene.set[o][wmes:length(gene.set)]
+                  }
+              }
+              if ('max_es_at' %in% return_stats) {
+                  res$max_es_at[i, j] <- r[o][wmes]
+              }
+              if ('le_prop' %in% return_stats) {
+                  res$le_prop[i, j] <- length(le_idx) / length(gene.set)
+              }
+              if ('leading_edge' %in% return_values) {
+                  res$leading_edge[[i]][[j]] <- le_idx
+              }
+          }
+      }
     }
     res
 }
