@@ -1,6 +1,9 @@
 .Rproj.user
 .Rhistory
 .RData
+.Rprofile
+renv/
+renv.lock
 tests/lib/
 docs/
 inst/doc
