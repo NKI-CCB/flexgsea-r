@@ -35,10 +35,12 @@ named_empty_list <- function(names) {
 #' enrichment functions.
 #'
 #' @section User-defined gene scoring function \code{gene.score.fn}:
-#' A gene score calculation function should take the following arguments:
+#' A score function or a list of two functions (\code{prepare} and \code{run}).
+#'
+#' The score function should take the following arguments:
 #' \describe{
 #'   \item{\code{x}:}{The data matrix \code{x}, exactly as given to the
-#'      \code{gsea} function.}
+#'      \code{gsea} function or modified by the prepare function.}
 #'   \item{\code{y}:}{Response variables to test for gene set enrichment.
 #'      The \code{y} given to the \code{gsea} function or a permutation of
 #'      \code{y}.
@@ -47,7 +49,10 @@ named_empty_list <- function(names) {
 #' }
 #' It should return a matrix with genes in the rows and responses in the columns. The number of
 #' responses is determined by this function, but must be the same for permuted y. The number of
-#' responses can be simply one. A simple example is \code{\link{flexgsea_lm}}.
+#' responses can be simply one.
+#' The prepare function should take the same arguments, and return an x that will be passed
+#' unmodified to the score function.
+#' A simple example is \code{\link{flexgsea_lm}}.
 #'
 #' @section User-defined gene set enrichment function \code{es.fn}:
 #' A list of two functions (\code{prepare} and \code{run}) and two character
@@ -227,6 +232,13 @@ flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
         }
         gene.names <- colnames(x)
     }
+    
+    if (is.function(gene.score.fn)) {
+        gene.score.fn <- list(
+            score = gene.score.fn,
+            prepare = function (x, y, abs) {list(x=x, y=y, abs=abs)}
+        )
+    }
 
     if (verbose) {
         message("Filtering gene sets on size in dataset")
@@ -238,16 +250,14 @@ flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
         stop("No valid gene sets after filtering for size.")
     }
 
+    gene.score.args <- gene.score.fn$prepare(x, y, abs=abs)
+
     #########################
     # Calculating observed ES
     if (verbose) {
         message("Scoring Genes (Observed)")
     }
-    if ('t.x' %in% methods::formalArgs(gene.score.fn)) {
-        gene.scores <- gene.score.fn(x, y, t.x=t.x, abs=abs)
-    } else {
-        gene.scores <- gene.score.fn(x, y, abs=abs)
-    }
+    gene.scores <- do.call(gene.score.fn$score, gene.score.args)
     if (any(!is.finite(gene.scores))) {
         stop("Gene scoring function returned NA or Inf. Check that all genes in x have a positive variance.")
     }
@@ -302,8 +312,8 @@ flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
     } else {
         perm.fun <- flexgsea_perm_sequential
     }
-    es.null <- perm.fun(x, y, gene.sets, gene.names, nperm, block.size,
-                        gene.score.fn, es.fn, responses, abs=abs,
+    es.null <- perm.fun(gene.score.args, gene.sets, gene.names, nperm, block.size,
+                        gene.score.fn$score, es.fn, responses, abs=abs,
                         verbose=verbose)
 
     ##############
@@ -353,11 +363,12 @@ flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
     res
 }
 
-flexgsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
+flexgsea_perm_sequential <- function(gene.score.args, gene.sets, gene.names, nperm,
                                   block.size, gene.score.fn, es.fn, responses,
                                   abs=F, verbose=F) {
     n.gene.sets <- length(gene.sets)
     n.genes <- length(gene.names)
+    y <- gene.score.args$y
     n.samples <- nrow(y)
 
     es.null <- array(NA_real_,
@@ -381,7 +392,7 @@ flexgsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
                            block.end))
         }
         for (perm.i in seq_len(nperm.block)) {
-            y.perm <- y[sample.int(nrow(y)), , drop=F]
+            y.perm <- y[sample.int(n.samples), , drop=F]
             y_attrs <- attributes(y)
             for (i in seq_along(y_attrs)) {
                 if (names(y_attrs)[[i]] %in% c('dim', 'dimnames', 'names',
@@ -390,7 +401,8 @@ flexgsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
                 }
                 attr(y.perm, names(y_attrs)[[i]]) <- y_attrs[[i]]
             }
-            r <- gene.score.fn(x, y.perm, abs=abs)
+            gene.score.args$y <- y.perm
+            r <- do.call(gene.score.fn, gene.score.args)
             gene.scores.null[, , perm.i] <- r
             if (verbose) {
                 message(".", appendLF=F)
@@ -419,12 +431,13 @@ flexgsea_perm_sequential <- function(x, y, gene.sets, gene.names, nperm,
     es.null
 }
 
-flexgsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
+flexgsea_perm_parallel <- function(gene.score.args, gene.sets, gene.names, nperm,
                                 block.size, gene.score.fn, es.fn, responses,
                                 abs=F, verbose=F) {
     `%dopar%` <- foreach::`%dopar%`
     n.gene.sets <- length(gene.sets)
     n.genes <- length(gene.names)
+    y <- gene.score.args$y
     n.samples <- nrow(y)
 
     n.blocks <- ceiling(nperm / block.size)
@@ -449,7 +462,8 @@ flexgsea_perm_parallel <- function(x, y, gene.sets, gene.names, nperm,
                 }
                 attr(y.perm, names(y_attrs)[[i]]) <- y_attrs[[i]]
             }
-            gene.scores.null[, , perm.i] <- gene.score.fn(x, y.perm, abs=abs)
+            gene.score.args$y <- y.perm
+            gene.scores.null[, , perm.i] <- do.call(gene.score.fn, gene.score.args)
         }
         if (any(!is.finite(gene.scores.null))) {
             stop("Gene scoring function returned NA or Inf.")
