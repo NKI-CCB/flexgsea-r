@@ -712,7 +712,8 @@ flexgsea_s2n <- function (x, y, abs=F) {
     coef = s2n_C(x, y_bin)
     # When the variance is zero in both classes the s2n is infinite, so we normalize
     # to a value larger than all others.
-    coef[is.infinite(coef)] <- max(coef[is.finite(coef)]) * 1.1
+    coef[is.infinite(coef) & coef > 0] <- max(coef[is.finite(coef)]) * 1.1
+    coef[is.infinite(coef) & coef < 0] <- min(coef[is.finite(coef)]) * 1.1
     rownames(coef) = colnames(x)
     colnames(coef) = colnames(y)
     if (abs) {
