@@ -31,7 +31,7 @@ flexgsea_limma <- list(
             }
             gene.names <- rownames(x)
         }
-        list(x = x, y = y, gene.names = gene.names, n.samples = n.samples, abs = abs)
+        list(x = x, y = y, gene.names = gene.names, n.samples = n.samples)
     },
     score = function (x, y, abs=F) {
         stopifnot(is.model.matrix(y))
@@ -75,6 +75,17 @@ prep_limma <- function(x, y, gene.names, abs) {
     prep
 }
 
+#' Score genes with limma-voom
+#'
+#' Scores genes by their coefficients in from limma. The data x given to flexgsea should be a matrix
+#' with RNAseq counts. This function uses TMM normalization and limma::voom. The response variables
+#' y should be a design matrix, as produced by \code{model.matrix}.
+#'
+#'
+#' @family gene scoring functions
+#' @usage flexgsea_limma_voom
+#'
+#' @export
 flexgsea_limma_voom <- list(
     prepare = function(x, y, gene.names, abs) {
         prep <- prep_limma(x, y, gene.names, abs)
@@ -99,6 +110,18 @@ flexgsea_limma_voom <- list(
     }
 )
 
+#' Score genes with limma-trend
+#'
+#' Scores genes by their coefficients in from limma. The data x given to flexgsea should be a matrix
+#' with RNAseq counts. This function uses TMM normalization converts the data to counts per million
+#' before running limma::lmFit. The response variables  y should be a design matrix, as produced by
+#' \code{model.matrix}.
+#'
+#'
+#' @family gene scoring functions
+#' @usage flexgsea_limma_trend
+#'
+#' @export
 flexgsea_limma_trend <- list(
     prepare = function(x, y, gene.names, abs) {
         prep = prep_limma(x, y, gene.names, abs)

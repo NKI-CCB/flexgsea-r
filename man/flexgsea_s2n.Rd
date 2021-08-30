@@ -13,7 +13,10 @@ Do not call directly, but give as the \option{gene.score.fn}  argument to
 \code{\link{flexgsea}}.
 }
 \seealso{
-Other gene scoring functions: \code{\link{flexgsea_limma}},
-  \code{\link{flexgsea_lm}}
+Other gene scoring functions: 
+\code{\link{flexgsea_limma_trend}},
+\code{\link{flexgsea_limma_voom}},
+\code{\link{flexgsea_limma}},
+\code{\link{flexgsea_lm}()}
 }
 \concept{gene scoring functions}

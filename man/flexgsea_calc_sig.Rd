@@ -19,6 +19,7 @@ Subramanian, A. et al. (2005) Gene Set Enrichment Analysis: A
   doi:10.1073/pnas.0506580102.
 }
 \seealso{
-Other functions for significance calculation: \code{\link{flexgsea_calc_sig_simple}}
+Other functions for significance calculation: 
+\code{\link{flexgsea_calc_sig_simple}()}
 }
 \concept{functions for significance calculation}

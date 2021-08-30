@@ -11,6 +11,7 @@ Calculates significance by the rank of ES score in the permuted values.
 Significance is calculated separately per gene set.
 }
 \seealso{
-Other functions for significance calculation: \code{\link{flexgsea_calc_sig}}
+Other functions for significance calculation: 
+\code{\link{flexgsea_calc_sig}()}
 }
 \concept{functions for significance calculation}

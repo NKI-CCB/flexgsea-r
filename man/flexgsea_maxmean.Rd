@@ -4,7 +4,9 @@
 \name{flexgsea_maxmean}
 \alias{flexgsea_maxmean}
 \title{The maxmean statistic for calculating gene set enrichement scores.}
-\format{An object of class \code{list} of length 3.}
+\format{
+An object of class \code{list} of length 3.
+}
 \usage{
 flexgsea_maxmean
 }
@@ -12,8 +14,9 @@ flexgsea_maxmean
 The maxmean statistic for calculating gene set enrichement scores.
 }
 \seealso{
-Other gene set enrichment functions: \code{\link{flexgsea_mean}},
-  \code{\link{flexgsea_weighted_ks}}
+Other gene set enrichment functions: 
+\code{\link{flexgsea_mean}},
+\code{\link{flexgsea_weighted_ks}}
 }
 \concept{gene set enrichment functions}
 \keyword{datasets}

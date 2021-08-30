@@ -39,20 +39,30 @@ named_empty_list <- function(names) {
 #'
 #' The score function should take the following arguments:
 #' \describe{
+#'   \item{\code{x}:}{The data matrix \code{x}, as given to the
+#'      \code{gsea} function and modified by the prepare function.}
+#'   \item{\code{y}:}{Response variables to test for gene set enrichment.
+#'      The \code{y} given to the \code{gsea} function and modified by the the prepare
+#'      function, or a permutation of that.}
+#'   \item{\code{abs}:}{Passed from main \code{flexgsea} function.}
+#' }
+#' It should return a matrix with genes in the rows and responses in the columns. The number of
+#' responses is determined by this function, but must be the same for permuted y. The number of
+#' responses can be simply one.
+#' The prepare function should take the following arguments:
+#' unmodified to the score function.
+#' \describe{
 #'   \item{\code{x}:}{The data matrix \code{x}, exactly as given to the
-#'      \code{gsea} function or modified by the prepare function.}
+#'      \code{gsea} function.}
 #'   \item{\code{y}:}{Response variables to test for gene set enrichment.
 #'      The \code{y} given to the \code{gsea} function or a permutation of
 #'      \code{y}.
 #'      This is a matrix with samples in the rows, and output variables in
 #'      the columns.}
+#'   \item{\code{abs}:}{Passed from main \code{flexgsea} function.}
 #' }
-#' It should return a matrix with genes in the rows and responses in the columns. The number of
-#' responses is determined by this function, but must be the same for permuted y. The number of
-#' responses can be simply one.
-#' The prepare function should take the same arguments, and return an x that will be passed
-#' unmodified to the score function.
-#' A simple example is \code{\link{flexgsea_lm}}.
+#' It should return a list with \code{x}, \code{y}, \code{gene.names} and/or
+#' \code {n.samples }to override default values.
 #'
 #' @section User-defined gene set enrichment function \code{es.fn}:
 #' A list of two functions (\code{prepare} and \code{run}) and two character
@@ -160,60 +170,70 @@ flexgsea <- function(x, y, gene.sets, gene.score.fn=flexgsea_s2n,
         gene.score.fn <- list(
             score = gene.score.fn,
             prepare = function (x, y, gene.names, abs) {
-                if (is.vector(y) || is.factor(y)) {
-                    y <- matrix(y, ncol=1)
-                }
-                if (is.matrix(x)) {
-                    t.x <- F
-                } else if (methods::is(x, 'EList')) {
+                if (methods::is(x, 'EList')) {
                     # Legacy code to support old style limma voom functions
-                    t.x <- T 
-                } else {
-                    stop('x should be a matrix')
-                }
-                if (t.x) {
-                    n.genes <- nrow(x)
                     n.samples <- ncol(x)
-                } else {
-                    n.genes <- ncol(x)
-                    n.samples <- nrow(x)
-                }
-                if (!is.null(gene.names)) {
-                    if(t.x) {
+                    if (!is.null(gene.names)) {
                         stopifnot(nrow(x) == length(gene.names))
                         rownames(x) <- gene.names
-                    } else {
-                        stopifnot(ncol(x) == length(gene.names))
-                        colnames(x) <- gene.names
+                    } else  {
+                        if (is.null(rownames(x))) {
+                            stop("Gene names should be given in gene.name or as row",
+                                 "names of x")
+                        }
+                        gene.names <- rownames(x)
                     }
-                } else if (t.x) {
-                    if (is.null(rownames(x))) {
-                        stop("Gene names should be given in gene.name or as row",
-                             "names of x")
-                    }
-                    gene.names <- rownames(x)
                 } else {
-                    if (is.null(colnames(x))) {
-                        stop("Gene names should be given in gene.name or as col",
-                             "names of x")
+                    n.samples <- nrow(x)
+                    if (!is.null(gene.names)) {
+                        stopifnot(nrow(x) == length(gene.names))
+                        colnames(x) <- gene.names
+                    } else  {
+                        if (is.null(colnames(x))) {
+                            stop("Gene names should be given in gene.name or as row",
+                                 "names of x")
+                        }
+                        gene.names <- colnames(x)
                     }
-                    gene.names <- colnames(x)
                 }
                 list(x=x, y=y, n.samples=n.samples, abs=abs,
                      gene.names = gene.names)
             }
         )
     }
-    
+
     gene.score.prep <- gene.score.fn$prepare(x=x, y=y, gene.names=gene.names, abs=abs)
-    stopifnot('x' %in% names(gene.score.prep))
-    x <- gene.score.prep$x
-    stopifnot('y' %in% names(gene.score.prep))
-    y <- gene.score.prep$y
-    stopifnot('n.samples' %in% names(gene.score.prep))
-    n.samples <- gene.score.prep$n.samples
-    stopifnot('gene.names' %in% names(gene.score.prep))
-    gene.names <- gene.score.prep$gene.names
+    if ('x' %in% names(gene.score.prep)) {
+        x <- gene.score.prep$x
+        if (!('gene.names' %in% names(gene.score.prep))) {
+            stop("Gene score preparation should return gene.names if returning x.")
+        }
+    } else if (!is.matrix(x)) {
+        stop("x should be a matrix.")
+    }
+    if ('y' %in% names(gene.score.prep)) {
+        y <- gene.score.prep$y
+    } else {
+        if (is.vector(y) || is.factor(y)) {
+            y <- matrix(y, ncol=1)
+        }
+    }
+    if ('n.samples' %in% names(gene.score.prep)) {
+        n.samples <- gene.score.prep$n.samples
+    } else {
+        n.samples <- nrow(x)
+    }
+    if ('gene.names' %in% names(gene.score.prep)) {
+        gene.names <- gene.score.prep$gene.names
+    } else if (is.null(gene.names)) {
+        stopifnot(is.matrix(x))
+        if (is.null(colnames(x))) {
+            stop("Gene names should be given in gene.name or as row",
+                 "names of x")
+        }
+        gene.names <- colnames(x)
+    } else {
+    }
     n.genes <- length(gene.names)
     rm(gene.score.prep)
 

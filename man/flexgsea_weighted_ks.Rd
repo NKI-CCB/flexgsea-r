@@ -4,7 +4,9 @@
 \name{flexgsea_weighted_ks}
 \alias{flexgsea_weighted_ks}
 \title{The weighted KS statistic for calculating gene set enrichement scores.}
-\format{An object of class \code{list} of length 4.}
+\format{
+An object of class \code{list} of length 4.
+}
 \usage{
 flexgsea_weighted_ks
 }
@@ -18,8 +20,9 @@ Subramanian, A. et al. (2005) Gene Set Enrichment Analysis: A
   doi:10.1073/pnas.0506580102.
 }
 \seealso{
-Other gene set enrichment functions: \code{\link{flexgsea_maxmean}},
-  \code{\link{flexgsea_mean}}
+Other gene set enrichment functions: 
+\code{\link{flexgsea_maxmean}},
+\code{\link{flexgsea_mean}}
 }
 \concept{gene set enrichment functions}
 \keyword{datasets}

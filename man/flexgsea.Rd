@@ -4,11 +4,23 @@
 \alias{flexgsea}
 \title{Flexible Gene Set Enrichment Analysis.}
 \usage{
-flexgsea(x, y, gene.sets, gene.score.fn = flexgsea_s2n,
-  es.fn = flexgsea_weighted_ks, sig.fun = flexgsea_calc_sig,
-  gene.names = NULL, nperm = 1000, gs.size.min = 10,
-  gs.size.max = 300, verbose = TRUE, block.size = 100,
-  parallel = NULL, abs = FALSE, return_values = character())
+flexgsea(
+  x,
+  y,
+  gene.sets,
+  gene.score.fn = flexgsea_s2n,
+  es.fn = flexgsea_weighted_ks,
+  sig.fun = flexgsea_calc_sig,
+  gene.names = NULL,
+  nperm = 1000,
+  gs.size.min = 10,
+  gs.size.max = 300,
+  verbose = TRUE,
+  block.size = 100,
+  parallel = NULL,
+  abs = FALSE,
+  return_values = character()
+)
 }
 \arguments{
 \item{x}{Gene expression matrix (samples by genes), or EList object
@@ -96,7 +108,22 @@ enrichment functions.
 
 \section{User-defined gene scoring function \code{gene.score.fn}}{
 
-A gene score calculation function should take the following arguments:
+A score function or a list of two functions (\code{prepare} and \code{run}).
+
+The score function should take the following arguments:
+\describe{
+  \item{\code{x}:}{The data matrix \code{x}, as given to the
+     \code{gsea} function and modified by the prepare function.}
+  \item{\code{y}:}{Response variables to test for gene set enrichment.
+     The \code{y} given to the \code{gsea} function and modified by the the prepare
+     function, or a permutation of that.}
+  \item{\code{abs}:}{Passed from main \code{flexgsea} function.}
+}
+It should return a matrix with genes in the rows and responses in the columns. The number of
+responses is determined by this function, but must be the same for permuted y. The number of
+responses can be simply one.
+The prepare function should take the following arguments:
+unmodified to the score function.
 \describe{
   \item{\code{x}:}{The data matrix \code{x}, exactly as given to the
      \code{gsea} function.}
@@ -105,16 +132,10 @@ A gene score calculation function should take the following arguments:
      \code{y}.
      This is a matrix with samples in the rows, and output variables in
      the columns.}
+  \item{\code{abs}:}{Passed from main \code{flexgsea} function.}
 }
-It should return a matrix with samples in the columns and genes in the rows.
-\describe{
-  \item{\code{x}:}{The data matrix \code{x}, exactly as given to the
-     \code{gsea} function.}
-  \item{\code{y}:}{Response variables to test for gene set enrichment.
-     A permutation of the \code{y} given to the \code{gsea} function.
-     This is a matrix with samples in the rows, and output variables in
-     the columns.}
-} A simple example is \code{\link{flexgsea_lm}}.
+It should return a list with \code{x}, \code{y}, \code{gene.names} and/or
+\code {n.samples }to override default values.
 }
 
 \section{User-defined gene set enrichment function \code{es.fn}}{
